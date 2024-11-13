@@ -71,18 +71,18 @@ beq $t2, $t7, bottom_line_end  # If we've reached the end, break
 j bottom_line_start        
 
 bottom_line_end:
-li $t3, 0x0000ff          # load blue color
-addi $t8, $zero, 256      # row offset value
-add $t6, $t0, $t8         # base address + row offset
-addi $t2, $zero, 60       # column position
-add $t4, $t6, $t2         # calculate final pixel position
-sw $t3, 0($t4)            # draw blue pixel at position
+li $t3, 0x0000ff          # Load blue color
+addi $t8, $zero, 256      # Row offset value
+add $t6, $t0, $t8         # Base address + row offset
+addi $t2, $zero, 60       # Column position
+add $t4, $t6, $t2         # Calculate final pixel position
+sw $t3, 0($t4)            # Draw blue pixel at position
 
-li $t3, 0xff0000          # load red color
-addi $t8, $zero, 384      # row offset 
-add $t6, $t0, $t8         # base address 
-addi $t2, $zero, 60       # column position
-add $t4, $t6, $t2         # pixel position
-sw $t3, 0($t4)            # draw
+li $t3, 0xff0000          # Load blue color
+addi $t8, $zero, 384      # Row offset value
+add $t6, $t0, $t8         # Base address + row offset
+addi $t2, $zero, 60       # Column position
+add $t4, $t6, $t2         # Calculate final pixel position
+sw $t3, 0($t4)            # Draw blue pixel at position
 
 
