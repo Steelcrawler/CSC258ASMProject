@@ -16,10 +16,9 @@ main:
     lw $t8, 0($t7)                # Load first word from keyboard
     beq $t8, 1, keyboard_input    # If first word 1, key is pressed
     
-main_draw:   
+main_draw:
     jal check_bottom
     jal draw_jar
-    # jal check_end_condition
     jal draw_pill
     
     li $v0, 32                    # syscall for sleep
@@ -27,6 +26,78 @@ main_draw:
     syscall
     
     j main                        # Loop back to main
+    
+
+##########################################################################
+# CHECK BOTTOM LOGIC
+##########################################################################
+check_bottom:
+    addi $sp, $sp, -4   # update stack position
+    sw $ra, 0($sp)      # write past $ra to stack to return later
+    jal erase_prev      # erase current pill so that there is no interference by location
+    
+    lw $s0, first_x_pill      # x1 position for first part
+    lw $s1, first_y_pill       # y1 position for first part
+    lw $s2, second_x_pill      # x2 position for second part
+    lw $s3, second_y_pill       # y2 position for red part
+    lw $s4, first_color       # color for first part
+    lw $s5, second_color       # color for second part
+    
+    sll $a0, $s0, 2     # shift the X value by 2 bits (multiply by 4 to get the byte offset)
+    sll $a1, $s1, 7     # shift the Y value by 7 bits (multiply by 128)
+    sll $a2, $s2, 2     # shift X value by 2 bits (byte offset)
+    sll $a3, $s3, 7     # shift Y value by 7 bits 
+    add $t2, $t0, $a1   # add the Y offset to $t0
+    add $t2, $t2, $a0   # real position for first half of pill
+    add $t3, $t0, $a3   # add Y offset to $t0
+    add $t3, $t3, $a2   # real position for second half of pill
+    
+    addi $t7, $t2, 128
+    lw $t8, 0($t7)
+    bne $t8, 0x000000, reset_pill   # if collision detected, reset pill
+    
+    addi $t7, $t3, 128
+    lw $t8, 0($t7)
+    bne $t8, 0x000000, reset_pill   # if collision detected, reset pill
+    
+    jal draw_pill                   # redraw the pill since no interference and can be drawn there
+    
+    lw $ra, 0($sp)      # read from stack
+    addi $sp, $sp, 4    # move stack pointer back to starting position
+    jr $ra              # jump to previous
+
+reset_pill:
+    # Draw current pill in final position
+    move $t9, $s4       # first color
+    sw $t9, 0($t2)      # draw first part
+    move $t9, $s5       # second color  
+    sw $t9, 0($t3)      # draw second part
+    # jal check_horz_four
+    jal check_end_condition
+    
+    # Reset pill position and colors
+    li $s0, 15      # x1 position for first part
+    li $s1, 6       # y1 position for first part
+    li $s2, 16      # x2 position for second part
+    li $s3, 6       # y2 position for red part
+    li $s4, 0       # color for first part
+    li $s5, 0       # color for second part
+    
+    sw $s0, first_x_pill
+    sw $s1, first_y_pill
+    sw $s2, second_x_pill
+    sw $s3, second_y_pill
+    sw $s4, first_color
+    sw $s5, second_color
+    
+    lw $ra, 0($sp)      # read from stack
+    addi $sp, $sp, 4    # move stack pointer back to starting position
+    jr $ra              # jump to previous
+    
+##########################################################################
+# CHECK IF 4 IN A ROW HORIZONTALLY
+##########################################################################
+
 
 ##########################################################################
 # CHECK END CONDITION LOGIC
@@ -36,13 +107,6 @@ check_end_condition:
     sw $ra, 0($sp)      # write past $ra to stack to return later
     
     li $t6, 0           # counter for filled positions
-    
-    lw $s0, first_x_pill      # x1 position for first part
-    lw $s1, first_y_pill       # y1 position for first part
-    lw $s2, second_x_pill      # x2 position for second part
-    lw $s3, second_y_pill       # y2 position for red part
-    lw $s4, first_color       # color for first part
-    lw $s5, second_color       # color for second part
     
     li $t2, 6           # y = 5
     sll $t2, $t2, 7
@@ -77,69 +141,6 @@ game_over:
     li $v0, 10          # syscall for exit
     syscall             # quit the program
     
-
-##########################################################################
-# CHECK BOTTOM LOGIC
-##########################################################################
-check_bottom:
-    addi $sp, $sp, -4   # update stack position
-    sw $ra, 0($sp)      # write past $ra to stack to return later
-    jal erase_prev      # erase current pill so that there is no interference by location
-    
-    lw $s0, first_x_pill      # x1 position for first part
-    lw $s1, first_y_pill       # y1 position for first part
-    lw $s2, second_x_pill      # x2 position for second part
-    lw $s3, second_y_pill       # y2 position for red part
-    lw $s4, first_color       # color for first part
-    lw $s5, second_color       # color for second part
-    
-    sll $a0, $s0, 2     # shift the X value by 2 bits (multiply by 4 to get the byte offset)
-    sll $a1, $s1, 7     # shift the Y value by 7 bits (multiply by 128)
-    sll $a2, $s2, 2     # shift X value by 2 bits (byte offset)
-    sll $a3, $s3, 7     # shift Y value by 7 bits 
-    add $t2, $t0, $a1   # add the Y offset to $t0
-    add $t2, $t2, $a0   # add the X offset to #t2
-    add $t3, $t0, $a3   # real position for first half of pill
-    add $t3, $t3, $a2   # real position for second half of pill
-    
-    addi $t7, $t2, 128
-    lw $t8, 0($t7)
-    bne $t8, 0x000000, reset_pill   # if collision detected, reset pill
-    
-    addi $t7, $t3, 128
-    lw $t8, 0($t7)
-    bne $t8, 0x000000, reset_pill   # if collision detected, reset pill
-    jal draw_pill                   # redraw the pill since no interference and can be drawn there
-    
-    lw $ra, 0($sp)      # read from stack
-    addi $sp, $sp, 4    # move stack pointer back to starting position
-    jr $ra              # jump to previous
-
-reset_pill:
-    # Draw current pill in final position
-    move $t9, $s4       # first color
-    sw $t9, 0($t2)      # draw first part
-    move $t9, $s5       # second color  
-    sw $t9, 0($t3)      # draw second part
-       
-    # Reset pill position and colors
-    li $s0, 15      # x1 position for first part
-    li $s1, 6       # y1 position for first part
-    li $s2, 16      # x2 position for second part
-    li $s3, 6       # y2 position for red part
-    li $s4, 0       # color for first part
-    li $s5, 0       # color for second part
-    
-    sw $s0, first_x_pill
-    sw $s1, first_y_pill
-    sw $s2, second_x_pill
-    sw $s3, second_y_pill
-    sw $s4, first_color
-    sw $s5, second_color
-    
-    lw $ra, 0($sp)      # read from stack
-    addi $sp, $sp, 4    # move stack pointer back to starting position
-    jr $ra              # jump to previous
 
 ##########################################################################
 # KEYBOARD INPUT LOGIC
@@ -467,7 +468,7 @@ draw_jar:
     addi $sp, $sp, -4   # update stack position
     sw $ra, 0($sp)      # write past $ra to stack to return later
     
-    addi $a0, $zero, 13 # Set X coordinate for starting point of line
+    addi $a0, $zero, 14 # Set X coordinate for starting point of line
     addi $a1, $zero, 2 # Set Y coordinate for starting point of line
     addi $a2, $zero, 3 # Set length of line
     li $t1, 0xffffff # Set color of line
@@ -493,7 +494,7 @@ draw_jar:
     
     addi $a0, $zero, 6 # Set X coordinate for starting point of line
     addi $a1, $zero, 5 # Set Y coordinate for starting point of line
-    addi $a2, $zero, 8 # Set length of line
+    addi $a2, $zero, 9 # Set length of line
     li $t1, 0xffffff # Set color of line
     jal horz_setup
     
