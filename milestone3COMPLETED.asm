@@ -263,7 +263,7 @@ check_column:
     bne $t6, 0x000000, next_position  # if position below not black, nothing to move
     
 
-    sw $t4, 0($t5)      # move pill down
+    sw $t4, 0($t5)      # move pixel down
     sw $zero, 0($t3)    # clear original position
     j check_column      # check this column again
     
@@ -313,9 +313,9 @@ vert_check_done:
 vert_look_for_consecutive:
     beq $t6, 5, vert_next_column        # reached top of the column (y = 5) so next column
     
-    sll $t8, $t5, 7     # calculate row offset 
-    add $t8, $t7, $t8   # final position at this point
-    lw $t9, 0($t8)      # get the color
+    sll $t8, $t5, 7     
+    add $t8, $t7, $t8   
+    lw $t9, 0($t8)      # get color
     
     beq $t9, 0x000000, vert_move_pointers   # if this point is black, then just move both the pointers
     
