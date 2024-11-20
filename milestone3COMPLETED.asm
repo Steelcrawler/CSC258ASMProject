@@ -117,7 +117,7 @@ check_row:
     j look_for_consecutive
 
 check_matches_complete:
-    beq $s7, 1, check_horz_again    # If we found matches, check again
+    beq $s7, 1, check_horz_again    # if we found matches, check again
     
     lw $ra, 0($sp)     
     addi $sp, $sp, 4    
@@ -134,19 +134,50 @@ look_for_consecutive:
     
     sll $t8, $t5, 2     
     add $t8, $t7, $t8   
-    lw $t9, 0($t8)      # Get color at left pointer
+    lw $t9, 0($t8)      # get color at left pointer
     
-    beq $t9, 0x000000, move_pointers_same_row # No color here -- move both pointers to next location
+    beq $t9, 0x000000, move_pointers_same_row # no color here -- move both pointers to next location
     
     
     sll $t8, $t6, 2    
     add $t8, $t7, $t8  
-    lw $t1, 0($t8)      # Get color at right pointer
+    lw $t1, 0($t8)      # get color at right pointer
     
-    bne $t9, $t1, check_match_length    # Reached the end of a potential sequence -- check length
-    
-    addi $t6, $t6, 1 # Otherwise color matches so move right pointer again
+    andi $s0, $t9, 0xFF      # left pointer blue (Applies a mask see lecture video to get rightmost bits for green)
+    andi $s1, $t1, 0xFF      # right pointer blue
+    sub $s2, $s0, $s1        # calculate blue difference
+    li $s3, -10              # lower bound (-10)
+    blt $s2, $s3, check_match_length # if signed difference < -10, not a virus
+    li $s3, 10               # upper bound (10)
+    bgt $s2, $s3, check_match_length # if signed difference > 10, not a virus
+
+    srl $t9, $t9, 8
+    srl $t1, $t1, 8
+    andi $s0, $t9, 0xFF                 # left pointer green (Applies a mask see lecture video to get rightmost bits for green)
+    andi $s1, $t1, 0xFF                 # right pointer green
+    sub $s2, $s0, $s1                   # calculate red difference
+    li $s3, -10                         # lower bound (-10)
+    blt $s2, $s3, check_match_length    # if signed difference < -10, not a virus
+    li $s3, 10                          # upper bound (10)
+    bgt $s2, $s3, check_match_length    # if signed difference > 10, not a virus
+
+    srl $t9, $t9, 8
+    srl $t1, $t1, 8
+    andi $s0, $t9, 0xFF                 # left pointer red
+    andi $s1, $t1, 0xFF                 # right pointer red
+    sub $s2, $s0, $s1                   # calculate red difference (Applies a mask see lecture video to get rightmost bits for green)
+    li $s3, -10                         # lower bound (-10)
+    blt $s2, $s3, check_match_length    # if signed difference < -10, not a virus
+    li $s3, 10                          # upper bound (10)
+    bgt $s2, $s3, check_match_length    # if signed difference > 10, not a virus
+
+    addi $t6, $t6, 1         # Color matches, move on
     j look_for_consecutive
+    
+    # bne $t9, $t1, check_match_length    # Reached the end of a potential sequence -- check length
+    
+    # addi $t6, $t6, 1 # Otherwise color matches so move right pointer again
+    # j look_for_consecutive
 
 check_match_length:
     sub $t8, $t6, $t5   # right pointer loc - left pointer loc
@@ -323,7 +354,35 @@ vert_look_for_consecutive:
     add $t8, $t7, $t8   
     lw $t1, 0($t8)      # get color from top pointer
     
-    bne $t9, $t1, vert_check_match_length   # colors arent same, so then check if long enough
+    andi $s0, $t9, 0xFF      # left pointer blue (Applies a mask see lecture video to get rightmost bits for green)
+    andi $s1, $t1, 0xFF      # right pointer blue
+    sub $s2, $s0, $s1        # calculate blue difference
+    li $s3, -10              # lower bound (-10)
+    blt $s2, $s3, vert_check_match_length # if signed difference < -10, not a virus
+    li $s3, 10               # upper bound (10)
+    bgt $s2, $s3, vert_check_match_length # if signed difference > 10, not a virus
+
+    srl $t9, $t9, 8
+    srl $t1, $t1, 8
+    andi $s0, $t9, 0xFF                 # left pointer green (Applies a mask see lecture video to get rightmost bits for green)
+    andi $s1, $t1, 0xFF                 # right pointer green
+    sub $s2, $s0, $s1                   # calculate red difference
+    li $s3, -10                         # lower bound (-10)
+    blt $s2, $s3, vert_check_match_length    # if signed difference < -10, not a virus
+    li $s3, 10                          # upper bound (10)
+    bgt $s2, $s3, vert_check_match_length    # if signed difference > 10, not a virus
+
+    srl $t9, $t9, 8
+    srl $t1, $t1, 8
+    andi $s0, $t9, 0xFF                 # left pointer red
+    andi $s1, $t1, 0xFF                 # right pointer red
+    sub $s2, $s0, $s1                   # calculate red difference (Applies a mask see lecture video to get rightmost bits for green)
+    li $s3, -10                         # lower bound (-10)
+    blt $s2, $s3, vert_check_match_length    # if signed difference < -10, not a virus
+    li $s3, 10                          # upper bound (10)
+    bgt $s2, $s3, vert_check_match_length    # if signed difference > 10, not a virus
+    
+    # bne $t9, $t1, vert_check_match_length   # colors arent same, so then check if long enough
     
     addi $t6, $t6, -1   # colors match so move top o
     j vert_look_for_consecutive
@@ -858,7 +917,7 @@ assign_color_first:
     
     beq $a0, 0, first_red
     beq $a0, 1, first_blue
-    li $s4, 0xffff00    # yellow if $a0 is 2
+    li $s4, 0x00ff00    # green if $a0 is 2
     
     sw $s4, first_color
 
@@ -886,7 +945,7 @@ assign_color_second:
     
     beq $a0, 0, second_red
     beq $a0, 1, second_blue
-    li $s5, 0xffff00    # yellow if $a0 is 2
+    li $s5, 0x00ff00    # green if $a0 is 2
 
     sw $s5, second_color
     
@@ -935,14 +994,14 @@ draw_virus_loop:
     
     beq $a0, 0, set_red
     beq $a0, 1, set_blue
-    li $t7, 0xffff00            # Yellow otherwise
+    li $t7, 0x00fe00            # green otherwise
     j draw_pixel
     
 set_red:
-    li $t7, 0xff0000            # set color to red
+    li $t7, 0xfe0000            # set color to red
     j draw_pixel
 set_blue:
-    li $t7, 0x0000ff            # set color to blue
+    li $t7, 0x0000fe            # set color to blue
     j draw_pixel
     
 draw_pixel:
