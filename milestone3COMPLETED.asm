@@ -143,8 +143,8 @@ look_for_consecutive:
     add $t8, $t7, $t8  
     lw $t1, 0($t8)      # get color at right pointer
     
-    andi $s0, $t9, 0xFF      # left pointer blue (Applies a mask see lecture video to get rightmost bits for green)
-    andi $s1, $t1, 0xFF      # right pointer blue
+    andi $s0, $t9, 0xff      # left pointer blue (Applies a mask see lecture video to get rightmost bits for green)
+    andi $s1, $t1, 0xff     # right pointer blue
     sub $s2, $s0, $s1        # calculate blue difference
     li $s3, -10              # lower bound (-10)
     blt $s2, $s3, check_match_length # if signed difference < -10, not a virus
@@ -153,8 +153,8 @@ look_for_consecutive:
 
     srl $t9, $t9, 8
     srl $t1, $t1, 8
-    andi $s0, $t9, 0xFF                 # left pointer green (Applies a mask see lecture video to get rightmost bits for green)
-    andi $s1, $t1, 0xFF                 # right pointer green
+    andi $s0, $t9, 0xff                 # left pointer green (Applies a mask see lecture video to get rightmost bits for green)
+    andi $s1, $t1, 0xff                 # right pointer green
     sub $s2, $s0, $s1                   # calculate red difference
     li $s3, -10                         # lower bound (-10)
     blt $s2, $s3, check_match_length    # if signed difference < -10, not a virus
@@ -163,8 +163,8 @@ look_for_consecutive:
 
     srl $t9, $t9, 8
     srl $t1, $t1, 8
-    andi $s0, $t9, 0xFF                 # left pointer red
-    andi $s1, $t1, 0xFF                 # right pointer red
+    andi $s0, $t9, 0xff                # left pointer red
+    andi $s1, $t1, 0xff                 # right pointer red
     sub $s2, $s0, $s1                   # calculate red difference (Applies a mask see lecture video to get rightmost bits for green)
     li $s3, -10                         # lower bound (-10)
     blt $s2, $s3, check_match_length    # if signed difference < -10, not a virus
@@ -289,15 +289,20 @@ check_column:
     
     beq $t4, 0x000000, next_position    # if black, move to next position, nothing to move
     
-    addi $t5, $t3, 128
-    lw $t6, 0($t5)      
-    bne $t6, 0x000000, next_position  # if position below not black, nothing to move
-    
+    beq $t4, 0x0000ff, check_below  # pill blue
+    beq $t4, 0x00ff00, check_below  # pill green 
+    beq $t4, 0xff0000, check_below  # pill red
+    j next_position                  # Not a pill color, skip 
+   
+check_below:
+   addi $t5, $t3, 128
+   lw $t6, 0($t5)      
+   bne $t6, 0x000000, next_position  # if position below not black
+   
+   sw $t4, 0($t5)      # move pixel down
+   sw $zero, 0($t3)    # clear original position
+   j check_column      # check this column again
 
-    sw $t4, 0($t5)      # move pixel down
-    sw $zero, 0($t3)    # clear original position
-    j check_column      # check this column again
-    
 next_position:
     addi $t1, $t1, -1   # move up one row
     j check_column
@@ -354,8 +359,8 @@ vert_look_for_consecutive:
     add $t8, $t7, $t8   
     lw $t1, 0($t8)      # get color from top pointer
     
-    andi $s0, $t9, 0xFF      # left pointer blue (Applies a mask see lecture video to get rightmost bits for green)
-    andi $s1, $t1, 0xFF      # right pointer blue
+    andi $s0, $t9, 0xff      # left pointer blue (Applies a mask see lecture video to get rightmost bits for green)
+    andi $s1, $t1, 0xff      # right pointer blue
     sub $s2, $s0, $s1        # calculate blue difference
     li $s3, -10              # lower bound (-10)
     blt $s2, $s3, vert_check_match_length # if signed difference < -10, not a virus
@@ -364,8 +369,8 @@ vert_look_for_consecutive:
 
     srl $t9, $t9, 8
     srl $t1, $t1, 8
-    andi $s0, $t9, 0xFF                 # left pointer green (Applies a mask see lecture video to get rightmost bits for green)
-    andi $s1, $t1, 0xFF                 # right pointer green
+    andi $s0, $t9, 0xff                 # left pointer green (Applies a mask see lecture video to get rightmost bits for green)
+    andi $s1, $t1, 0xff                 # right pointer green
     sub $s2, $s0, $s1                   # calculate red difference
     li $s3, -10                         # lower bound (-10)
     blt $s2, $s3, vert_check_match_length    # if signed difference < -10, not a virus
@@ -374,8 +379,8 @@ vert_look_for_consecutive:
 
     srl $t9, $t9, 8
     srl $t1, $t1, 8
-    andi $s0, $t9, 0xFF                 # left pointer red
-    andi $s1, $t1, 0xFF                 # right pointer red
+    andi $s0, $t9, 0xff                 # left pointer red
+    andi $s1, $t1, 0xff                 # right pointer red
     sub $s2, $s0, $s1                   # calculate red difference (Applies a mask see lecture video to get rightmost bits for green)
     li $s3, -10                         # lower bound (-10)
     blt $s2, $s3, vert_check_match_length    # if signed difference < -10, not a virus
@@ -534,26 +539,32 @@ drop_column:
     
     
 drop_loop:
-    beq $t1, 5, column_done    # finished if at top position in jar
-    
-    sll $t3, $t7, 2     
-    sll $t8, $t1, 7     
-    add $t8, $t8, $t0   
-    add $t8, $t8, $t3   # get address of current pixel
-    
-    lw $t9, 0($t8)      # Get current pixel color
-    beq $t9, 0xffffff, column_done
-    beq $t9, 0x000000, vert_next_position  # If black, skip
-    
-    addi $t3, $t8, 128  # address of position below
-    lw $t4, 0($t3)      # color below
-    bne $t4, 0x000000, vert_next_position  # if not black below, cant drop
-    
-    # Drop the pixel
-    sw $t9, 0($t3)      # move color down
-    sw $zero, 0($t8)    # clear original position
-    addi $t1, $t1, 1
-    j drop_loop         # check column again
+   beq $t1, 5, column_done    # finished if at top position in jar
+   
+   sll $t3, $t7, 2     
+   sll $t8, $t1, 7     
+   add $t8, $t8, $t0   
+   add $t8, $t8, $t3   # get address of current pixel
+   
+   lw $t9, 0($t8)      # get current pixel color
+   beq $t9, 0xffffff, column_done
+   beq $t9, 0x000000, vert_next_position  # if black, skip
+   
+   # Check if pure color
+   beq $t9, 0x0000FF, check_below_vert  # pill color blue 
+   beq $t9, 0x00FF00, check_below_vert  # pill color green
+   beq $t9, 0xFF0000, check_below_vert  # pill color red
+   j vert_next_position            # Not pill color, skip
+   
+check_below_vert:
+   addi $t3, $t8, 128  
+   lw $t4, 0($t3)      
+   bne $t4, 0x000000, vert_next_position  # if not black below, cant drop
+   
+   sw $t9, 0($t3)      # move color down
+   sw $zero, 0($t8)    # clear original position
+   addi $t1, $t1, 1
+   j drop_loop         # check column again
     
 vert_next_position:
     addi $t1, $t1, -1    # move up one row
