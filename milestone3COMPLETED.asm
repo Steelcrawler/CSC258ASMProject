@@ -7,6 +7,8 @@ first_color: .word 0
 second_x_pill: .word 16
 second_y_pill: .word 6
 second_color: .word 0
+next_first_color: .word 0
+next_second_color: .word 0
 viruses_drawn: .byte 0
 
 .text
@@ -21,6 +23,7 @@ main_draw:
     jal check_bottom
     jal draw_jar
     jal draw_pill
+    jal draw_next_pill
     
     li $v0, 32                    # syscall for sleep
     li $a0, 50                    # sleep for 50 milliseconds
@@ -342,6 +345,7 @@ vert_check_row:
 vert_check_done:
    beq $s7, 1, check_vert_again    # if match exists, restart check
    
+   jal check_horz_four
    lw $ra, 0($sp)      
    addi $sp, $sp, 4    
    jr $ra               # done so go back to where we were
@@ -389,7 +393,7 @@ vert_look_for_consecutive:
     
     # bne $t9, $t1, vert_check_match_length   # colors arent same, so then check if long enough
     
-    addi $t6, $t6, -1   # colors match so move top o
+    addi $t6, $t6, -1   # colors match so move top 
     j vert_look_for_consecutive
 
 vert_check_match_length:
@@ -533,9 +537,9 @@ drop_vertical:
 drop_column:
     addi $sp, $sp, -4
     sw $ra, 0($sp)
-    
-    move $t1, $a2       # starting at top y position
-    addi $t1, $t1, -1    # start at position 1 above the last pixel removed
+
+    move $t1, $a1       # starting at top y position
+    addi $t1, $t1, 1    # start at position 1 above the last pixel removed
     
     
 drop_loop:
@@ -554,7 +558,7 @@ drop_loop:
    beq $t9, 0x0000FF, check_below_vert  # pill color blue 
    beq $t9, 0x00FF00, check_below_vert  # pill color green
    beq $t9, 0xFF0000, check_below_vert  # pill color red
-   j vert_next_position            # Not pill color, skip
+   j vert_next_position            # not pill color, skip
    
 check_below_vert:
    addi $t3, $t8, 128  
@@ -571,7 +575,6 @@ vert_next_position:
     j drop_loop
     
 column_done:
-    # Restore registers
     lw $ra, 0($sp)
     addi $sp, $sp, 4
     jr $ra
@@ -894,9 +897,11 @@ draw_pill:
     lw $s3, second_y_pill       # y2 position for red part
     lw $s4, first_color       # color for first part
     lw $s5, second_color
+    lw $s6, next_first_color
+    lw $s7, next_second_color
     
-    beq $s4, 0, assign_color_first
-    beq $s5, 0, assign_color_second
+    beq $s4, 0, update_colors
+    beq $s5, 0, update_colors
     addi $sp, $sp, -4   # update stack position
     sw $ra, 0($sp)      # write past $ra to stack to return later
     
@@ -919,59 +924,124 @@ draw_pill:
     addi $sp, $sp, 4    # move stack pointer back to starting position
     jr $ra              # jump to previous
 
-
-assign_color_first:
-    li $v0, 42          
+update_colors:
+    move $s4, $s6       # first_color = next_first_color
+    move $s5, $s7       # second_color = next_second_color
+    sw $s4, first_color
+    sw $s5, second_color
+    
+    li $v0, 42  # new color for next_first_color
     li $a0, 0           
     li $a1, 3           
     syscall             
     
-    beq $a0, 0, first_red
-    beq $a0, 1, first_blue
-    li $s4, 0x00ff00    # green if $a0 is 2
+    beq $a0, 0, next_first_red
+    beq $a0, 1, next_first_blue
+    li $s6, 0x00ff00    # green
+    j next_first_done
     
-    sw $s4, first_color
-
-
-    j first_done
-first_red:
-    li $s4, 0xff0000    # red if $a0 is 0
-
-    sw $s4, first_color
+next_first_red:
+    li $s6, 0xff0000    # red 
+    j next_first_done
     
-    j first_done
-first_blue:
-    li $s4, 0x0000ff    # blue if $a0 is 1
-    sw $s4, first_color
-    j first_done
+next_first_blue:
+    li $s6, 0x0000ff    # blue 
+    j next_first_done
     
-first_done:
-    j draw_pill
-
-assign_color_second:
-    li $v0, 42
+next_first_done:
+    sw $s6, next_first_color
+    
+    li $v0, 42      # new colors for next_second_color
     li $a0, 0
     li $a1, 3
     syscall
     
-    beq $a0, 0, second_red
-    beq $a0, 1, second_blue
-    li $s5, 0x00ff00    # green if $a0 is 2
-
-    sw $s5, second_color
+    beq $a0, 0, next_second_red
+    beq $a0, 1, next_second_blue
+    li $s7, 0x00ff00    # green 
+    j next_second_done
     
-    j second_done
-second_red:
-    li $s5, 0xff0000    # red if $a0 is 0
-    sw $s5, second_color
-    j second_done
-second_blue:
-    li $s5, 0x0000ff    # blue if $a0 is 1
-    sw $s5, second_color
-second_done:
+next_second_red:
+    li $s7, 0xff0000    # red 
+    j next_second_done
+    
+next_second_blue:
+    li $s7, 0x0000ff    # blue 
+    j next_second_done
+    
+draw_next_pill:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+    addi $sp, $sp, -4
+    sw $t0, 0($sp)
+    addi $sp, $sp, -4
+    sw $t1, 0($sp)
+    addi $sp, $sp, -4
+    sw $t2, 0($sp)
+    addi $sp, $sp, -4
+    sw $t3, 0($sp)
+    addi $sp, $sp, -4
+    sw $t4, 0($sp)
+    addi $sp, $sp, -4
+    sw $t5, 0($sp)
+    addi $sp, $sp, -4
+    sw $t6, 0($sp)
+    addi $sp, $sp, -4
+    sw $t7, 0($sp)
+    addi $sp, $sp, -4
+    sw $t8, 0($sp)
+    addi $sp, $sp, -4
+    sw $t9, 0($sp)
+    
+    
+    li $t1, 6          
+    li $t2, 25          
+    sll $t1, $t1, 2     
+    sll $t2, $t2, 7     
+    add $t3, $t0, $t2  
+    add $t3, $t3, $t1   # point (6, 25)
+    
+    lw $t4, next_first_color
+    sw $t4, 0($t3)
+    
+    li $t1, 7           
+    sll $t1, $t1, 2 
+    add $t3, $t0, $t2   
+    add $t3, $t3, $t1   # point (7, 25)
+    
+    lw $t4, next_second_color
+    
+    sw $t4, 0($t3)
+    lw $t9, 0($sp)
+    addi $sp, $sp, 4
+    lw $t8, 0($sp)
+    addi $sp, $sp, 4
+    lw $t7, 0($sp)
+    addi $sp, $sp, 4
+    lw $t6, 0($sp)
+    addi $sp, $sp, 4
+    lw $t5, 0($sp)
+    addi $sp, $sp, 4
+    lw $t4, 0($sp)
+    addi $sp, $sp, 4
+    lw $t3, 0($sp)
+    addi $sp, $sp, 4
+    lw $t2, 0($sp)
+    addi $sp, $sp, 4
+    lw $t1, 0($sp)
+    addi $sp, $sp, 4
+    lw $t0, 0($sp)
+    addi $sp, $sp, 4
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra         
+
+next_second_done:
+    sw $s7, next_second_color
+
     j draw_pill
 
-
+    
 ##########################################################################
 # DRAW THE JAR
 ##########################################################################
