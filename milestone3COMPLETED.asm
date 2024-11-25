@@ -156,9 +156,9 @@ look_for_consecutive:
     andi $s1, $t1, 0xff     # right pointer blue
     sub $s2, $s0, $s1        # calculate blue difference
     li $s3, -51              # lower bound (-10)
-    blt $s2, $s3, check_match_length # if signed difference < -10, not a virus
+    blt $s2, $s3, check_match_length # if signed difference < -51, not a virus
     li $s3, 51               # upper bound (10)
-    bgt $s2, $s3, check_match_length # if signed difference > 10, not a virus
+    bgt $s2, $s3, check_match_length # if signed difference > 51, not a virus
 
     srl $t9, $t9, 8
     srl $t1, $t1, 8
@@ -166,9 +166,9 @@ look_for_consecutive:
     andi $s1, $t1, 0xff                 # right pointer green
     sub $s2, $s0, $s1                   # calculate red difference
     li $s3, -51                         # lower bound (-10)
-    blt $s2, $s3, check_match_length    # if signed difference < -10, not a virus
+    blt $s2, $s3, check_match_length    # if signed difference < -51, not a virus
     li $s3, 51                          # upper bound (10)
-    bgt $s2, $s3, check_match_length    # if signed difference > 10, not a virus
+    bgt $s2, $s3, check_match_length    # if signed difference > 51, not a virus
 
     srl $t9, $t9, 8
     srl $t1, $t1, 8
@@ -176,9 +176,9 @@ look_for_consecutive:
     andi $s1, $t1, 0xff                 # right pointer red
     sub $s2, $s0, $s1                   # calculate red difference (Applies a mask see lecture video to get rightmost bits for green)
     li $s3, -51                         # lower bound (-10)
-    blt $s2, $s3, check_match_length    # if signed difference < -10, not a virus
+    blt $s2, $s3, check_match_length    # if signed difference < -51, not a virus
     li $s3, 51                          # upper bound (10)
-    bgt $s2, $s3, check_match_length    # if signed difference > 10, not a virus
+    bgt $s2, $s3, check_match_length    # if signed difference > 51, not a virus
 
     addi $t6, $t6, 1         # Color matches, move on
     j look_for_consecutive
@@ -373,9 +373,9 @@ vert_look_for_consecutive:
     andi $s1, $t1, 0xff      # right pointer blue
     sub $s2, $s0, $s1        # calculate blue difference
     li $s3, -51              # lower bound (-10)
-    blt $s2, $s3, vert_check_match_length # if signed difference < -10, not a virus
+    blt $s2, $s3, vert_check_match_length # if signed difference < -51, not a virus
     li $s3, 51               # upper bound (10)
-    bgt $s2, $s3, vert_check_match_length # if signed difference > 10, not a virus
+    bgt $s2, $s3, vert_check_match_length # if signed difference > 51, not a virus
 
     srl $t9, $t9, 8
     srl $t1, $t1, 8
@@ -383,9 +383,9 @@ vert_look_for_consecutive:
     andi $s1, $t1, 0xff                 # right pointer green
     sub $s2, $s0, $s1                   # calculate red difference
     li $s3, -51                        # lower bound (-10)
-    blt $s2, $s3, vert_check_match_length    # if signed difference < -10, not a virus
+    blt $s2, $s3, vert_check_match_length    # if signed difference < -51, not a virus
     li $s3, 51                          # upper bound (10)
-    bgt $s2, $s3, vert_check_match_length    # if signed difference > 10, not a virus
+    bgt $s2, $s3, vert_check_match_length    # if signed difference > 51, not a virus
 
     srl $t9, $t9, 8
     srl $t1, $t1, 8
@@ -393,9 +393,9 @@ vert_look_for_consecutive:
     andi $s1, $t1, 0xff                 # right pointer red
     sub $s2, $s0, $s1                   # calculate red difference (Applies a mask see lecture video to get rightmost bits for green)
     li $s3, -51                         # lower bound (-10)
-    blt $s2, $s3, vert_check_match_length    # if signed difference < -10, not a virus
+    blt $s2, $s3, vert_check_match_length    # if signed difference < -51, not a virus
     li $s3, 51                          # upper bound (10)
-    bgt $s2, $s3, vert_check_match_length    # if signed difference > 10, not a virus
+    bgt $s2, $s3, vert_check_match_length    # if signed difference > 51, not a virus
     
     # bne $t9, $t1, vert_check_match_length   # colors arent same, so then check if long enough
     
@@ -638,7 +638,12 @@ keyboard_input:                    # any key is pressed
     beq $a0, 0x64, D_input          # check if the key d was pressed
     beq $a0, 0x61, A_input          # check if the key a was pressed
     beq $a0, 0x77, W_input          # check if the key w was pressed
-    b main
+    beq $a0, 0x66, F_input          # check if the key f was pressed
+    j main
+    
+F_input:
+
+    j main_draw
 
 Q_input:
     li $v0, 10                   # quit
@@ -771,25 +776,57 @@ curr_pill_horizontal:
     j curr_make_vertical_inverted           # pill will become inverted with next step since s2 < s0
 
 curr_make_vertical_og:
-    lw $s0, first_x_pill      # x1 position for first part
+    lw $s0, first_x_pill
+    lw $s1, first_y_pill
+    sll $t1, $s0, 2     
+    sll $t2, $s1, 7     
+    add $t3, $t0, $t2   
+    add $t3, $t3, $t1   
+    addi $t3, $t3, -128  
+    lw $t4, 0($t3)      # get color
+    bne $t4, 0x000000, main_draw  # if not black, can't flip
+    
+    lw $s2, second_x_pill
+    lw $s3, second_y_pill
+    sll $t1, $s2, 2     
+    sll $t2, $s3, 7     
+    add $t3, $t0, $t2   
+    add $t3, $t3, $t1   
+    addi $t3, $t3, -128  
+    lw $t4, 0($t3)      # get color
+    bne $t4, 0x000000, main_draw  # if not black, can't flip
+
     lw $s1, first_y_pill       # y1 position for first part
     lw $s2, second_x_pill      # x2 position for second part
-    lw $s3, second_y_pill       # y2 position for red part
-    lw $s4, first_color       # color for first part
-    lw $s5, second_color       # color for second part
     
     addi $s1, $s1, -1                   # move top block up one position
     addi, $s2, $s2, -1                   # slide bottom block under the top one
     
-    sw $s0, first_x_pill
     sw $s1, first_y_pill
     sw $s2, second_x_pill
-    sw $s3, second_y_pill
-    sw $s4, first_color
-    sw $s5, second_color
     j main
     
 curr_make_vertical_inverted:
+    lw $s0, first_x_pill
+    lw $s1, first_y_pill
+    sll $t1, $s0, 2     
+    sll $t2, $s1, 7     
+    add $t3, $t0, $t2   
+    add $t3, $t3, $t1   
+    addi $t3, $t3, -128  
+    lw $t4, 0($t3)      # get color
+    bne $t4, 0x000000, main_draw  # if not black, can't flip
+    
+    lw $s2, second_x_pill
+    lw $s3, second_y_pill
+    sll $t1, $s2, 2     
+    sll $t2, $s3, 7     
+    add $t3, $t0, $t2   
+    add $t3, $t3, $t1   
+    addi $t3, $t3, -128  
+    lw $t4, 0($t3)      # get color
+    bne $t4, 0x000000, main_draw  # if not black, can't flip
+    
     lw $s0, first_x_pill      # x1 position for first part
     lw $s3, second_y_pill       # y2 position for red part
     
@@ -805,7 +842,7 @@ vertical:
     j make_horizontal_inverted          # pill is in inverted vertical position
 
 make_horizontal_og:
-    # Check space to right of top segment
+    # check space to right of top segment
     sll $t1, $s0, 2     
     sll $t2, $s1, 7     
     add $t3, $t0, $t2   
@@ -814,7 +851,7 @@ make_horizontal_og:
     lw $t4, 0($t3)      # get color
     bne $t4, 0x000000, main_draw  # if not black, can't flip
     
-    # Check space to right of bottom segment
+    # check space to right of bottom segment
     sll $t1, $s2, 2     
     sll $t2, $s3, 7     
     add $t3, $t0, $t2   
@@ -834,7 +871,7 @@ make_horizontal_og:
     j main
 
 make_horizontal_inverted:
-    # Check space to right of top segment
+    # check space to right of top segment
     sll $t1, $s0, 2     
     sll $t2, $s1, 7     
     add $t3, $t0, $t2   
@@ -843,7 +880,7 @@ make_horizontal_inverted:
     lw $t4, 0($t3)      # get color
     bne $t4, 0x000000, main_draw  # if not black, can't flip
     
-    # Check space to right of bottom segment
+    # check space to right of bottom segment
     sll $t1, $s2, 2     
     sll $t2, $s3, 7     
     add $t3, $t0, $t2   
