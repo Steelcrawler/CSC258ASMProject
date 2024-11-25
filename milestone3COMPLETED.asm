@@ -1,5 +1,6 @@
 .data
 displayaddress: .word 0x10008000
+backupDisplay: .space 16384
 keyboardAddress: .word 0xffff0000
 first_x_pill: .word 15
 first_y_pill: .word 6
@@ -745,8 +746,198 @@ keyboard_input:                    # any key is pressed
     beq $a0, 0x61, A_input          # check if the key a was pressed
     beq $a0, 0x77, W_input          # check if the key w was pressed
     beq $a0, 0x66, F_input          # check if the key f was pressed
+    beq $a0, 0x70, P_input          # check if the key p was pressed
     j main
     
+P_input:
+    la $t0, displayaddress    
+    lw $t0, 0($t0)            
+    la $t1, backupDisplay      
+    li $t2, 16384             # total to count
+    li $t3, 0                 # count so far
+    
+save_display:
+    beq $t3, $t2, clear_screen  
+    add $t4, $t0, $t3        
+    add $t5, $t1, $t3         # address to save to
+    lw $t6, 0($t4)           # get pixel from bitmap
+    sw $t6, 0($t5)           # save to backup
+    addi $t3, $t3, 4         
+    j save_display
+
+clear_screen:
+    la $t0, displayaddress    
+    lw $t0, 0($t0)            
+    li $t2, 16384             
+    li $t3, 0                 
+    
+clear_pause_loop:
+    beq $t3, $t2, draw_paused  
+    add $t4, $t0, $t3         
+    sw $zero, 0($t4)          
+    addi $t3, $t3, 4         # clear screen
+    j clear_pause_loop
+    
+draw_paused:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)      # Save return address
+    
+    li $t1, 0xFFFFFF    # White color for text
+    
+    # draw p
+    li $a0, 2           
+    li $a1, 2           
+    li $a2, 7          
+    jal vert_setup
+    
+    li $a0, 2           
+    li $a1, 2           
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 2           
+    li $a1, 5          
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 5           
+    li $a1, 2           
+    li $a2, 4          
+    jal vert_setup      
+    
+    # draw a
+    li $a0, 7         
+    li $a1, 2           
+    li $a2, 7          
+    jal vert_setup      
+    
+    li $a0, 10        
+    li $a1, 2           
+    li $a2, 7          
+    jal vert_setup      
+    
+    li $a0, 7          
+    li $a1, 2           
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 7          
+    li $a1, 5          
+    li $a2, 3           
+    jal horz_setup   
+    
+    # draw u
+    li $a0, 12         
+    li $a1, 2           
+    li $a2, 7          
+    jal vert_setup      
+    
+    li $a0, 15        
+    li $a1, 2           
+    li $a2, 7          
+    jal vert_setup 
+    
+    li $a0, 12          
+    li $a1, 8          
+    li $a2, 3           
+    jal horz_setup 
+    
+    # draw s
+    li $a0, 17          
+    li $a1, 2           
+    li $a2, 4           
+    jal horz_setup      
+    
+    li $a0, 17          
+    li $a1, 5           
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 17          
+    li $a1, 8           
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 17          
+    li $a1, 2           
+    li $a2, 4           
+    jal vert_setup      
+    
+    li $a0, 20          
+    li $a1, 5           
+    li $a2, 4           
+    jal vert_setup 
+    
+    # draw e
+    li $a0, 22          
+    li $a1, 2           
+    li $a2, 7           
+    jal vert_setup      
+    
+    li $a0, 22          
+    li $a1, 2           
+    li $a2, 4           
+    jal horz_setup      
+    
+    li $a0, 22          
+    li $a1, 5           
+    li $a2, 4           
+    jal horz_setup      
+    
+    li $a0, 22          
+    li $a1, 8           
+    li $a2, 4           
+    jal horz_setup
+    
+    # draw d
+    li $a0, 27          
+    li $a1, 2           
+    li $a2, 7           
+    jal vert_setup   
+    
+    li $a0, 30          
+    li $a1, 3           
+    li $a2, 5           
+    jal vert_setup
+    
+    li $a0, 27          
+    li $a1, 2           
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 27          
+    li $a1, 8           
+    li $a2, 3           
+    jal horz_setup      
+    
+    j wait_for_unpause  
+
+wait_for_unpause:
+    lw $t7, 0xffff0000       
+    beq $t7, 0, wait_for_unpause
+    
+    lw $t8, 0xffff0004       # check key press, keep waiting if not p
+    bne $t8, 0x70, wait_for_unpause
+    
+    # p was pressed, so unpause
+    la $t0, displayaddress    
+    lw $t0, 0($t0)            
+    la $t1, backupDisplay      
+    li $t2, 16384             
+    li $t3, 0                
+    
+restore_from_pause:
+    beq $t3, $t2, pause_done  
+    add $t4, $t0, $t3         
+    add $t5, $t1, $t3         
+    lw $t6, 0($t5)           # load from backup
+    sw $t6, 0($t4)           # save to bitmap
+    addi $t3, $t3, 4
+    j restore_from_pause
+
+pause_done:
+    j main
+
 F_input:
     lw $t2, saved_first_color
     beq $t2, $zero, save_color
