@@ -655,25 +655,32 @@ drop_column:
     
     
 drop_loop:
-    beq $t1, 5, column_done    # finished if at top position in jar
-    
-    sll $t3, $t7, 2     
-    sll $t8, $t1, 7     
-    add $t8, $t8, $t0   
-    add $t8, $t8, $t3   # get address of current pixel
-    
-    lw $t9, 0($t8)      
-    beq $t9, 0xffffff, column_done
-    beq $t9, 0x000000, vert_next_position  # If black, skip
-    
-    addi $t3, $t8, 128  
-    lw $t4, 0($t3)     
-    bne $t4, 0x000000, vert_next_position  # if not black below, cant drop
-    
-    sw $t9, 0($t3)      
-    sw $zero, 0($t8)    
-    addi $t1, $t1, 1
-    j drop_loop         
+   beq $t1, 5, column_done    # finished if at top position in jar
+   
+   sll $t3, $t7, 2     
+   sll $t8, $t1, 7     
+   add $t8, $t8, $t0   
+   add $t8, $t8, $t3   # get address of current pixel
+   
+   lw $t9, 0($t8)      # get current pixel color
+   beq $t9, 0xffffff, column_done
+   beq $t9, 0x000000, vert_next_position  # if black, skip
+   
+   # Check if pure color
+   beq $t9, 0x0000FF, check_below_vert  # pill color blue 
+   beq $t9, 0x00FF00, check_below_vert  # pill color green
+   beq $t9, 0xFF0000, check_below_vert  # pill color red
+   j vert_next_position            # Not pill color, skip
+   
+check_below_vert:
+   addi $t3, $t8, 128  
+   lw $t4, 0($t3)      
+   bne $t4, 0x000000, vert_next_position  # if not black below, cant drop
+   
+   sw $t9, 0($t3)      # move color down
+   sw $zero, 0($t8)    # clear original position
+   addi $t1, $t1, 1
+   j drop_loop         # check column again
     
 vert_next_position:
     addi $t1, $t1, -1    # move up one row
