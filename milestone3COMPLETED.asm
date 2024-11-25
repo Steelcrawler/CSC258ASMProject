@@ -3,9 +3,9 @@ displayaddress: .word 0x10008000
 keyboardAddress: .word 0xffff0000
 first_x_pill: .word 15
 first_y_pill: .word 6
-first_color: .word 0
 second_x_pill: .word 16
 second_y_pill: .word 6
+first_color: .word 0
 second_color: .word 0
 next_first_color: .word 0
 next_second_color: .word 0
@@ -15,6 +15,10 @@ next_first_color3: .word 0
 next_second_color3: .word 0
 next_first_color4: .word 0
 next_second_color4: .word 0
+next_first_color5: .word 0
+next_second_color5: .word 0
+saved_first_color: .word 0
+saved_second_color: .word 0
 viruses_drawn: .byte 0
 
 .text
@@ -30,6 +34,7 @@ main_draw:
     jal draw_jar
     jal draw_pill
     jal draw_next_pill
+    jal check_viruses
     
     li $v0, 32                    # syscall for sleep
     li $a0, 50                    # sleep for 50 milliseconds
@@ -37,6 +42,108 @@ main_draw:
     
     j main                        # Loop back to main
     
+##########################################################################
+# CHECK FOR VIRUSES
+##########################################################################
+check_viruses:
+    li $t1, 6       # start x
+    li $t2, 5       # start y
+    li $t5, 0       # red counter
+    li $t6, 0       # blue counter
+    li $t7, 0       # green counter
+   
+virus_loop_y:
+    li $t1, 6      
+   
+virus_loop_x:
+    sll $t9, $t1, 2     
+    sll $t8, $t2, 7     
+    add $t3, $t0, $t8   
+    add $t3, $t3, $t9  
+    lw $t4, 0($t3)
+   
+    beq $t4, 0xCC0000, count_red
+    beq $t4, 0x0000CC, count_blue
+    beq $t4, 0x00CC00, count_green
+    j continue_check
+   
+count_red:
+    addi $t5, $t5, 1
+    j continue_check
+   
+count_blue:
+    addi $t6, $t6, 1
+    j continue_check
+   
+count_green:
+    addi $t7, $t7, 1
+   
+continue_check:
+    addi $t1, $t1, 1    
+    blt $t1, 23, virus_loop_x
+   
+    addi $t2, $t2, 1    
+    blt $t2, 20, virus_loop_y
+    
+clear_indicators:
+   li $t1, 15      
+   li $t2, 25      
+
+   li $t4, 0x000000    
+   
+   sll $t9, $t1, 2     
+   sll $t8, $t2, 7     
+   add $t3, $t0, $t8   
+   add $t3, $t3, $t9
+   sw $t4, 0($t3)
+   
+   addi $t1, $t1, 2
+   sll $t9, $t1, 2     
+   add $t3, $t0, $t8   
+   add $t3, $t3, $t9
+   sw $t4, 0($t3)
+   
+   addi $t1, $t1, 2
+   sll $t9, $t1, 2     
+   add $t3, $t0, $t8   
+   add $t3, $t3, $t9
+   sw $t4, 0($t3)
+
+draw_indicators:
+    blez $t5, check_blue   
+    li $t1, 15
+    li $t2, 25
+    sll $t9, $t1, 2     
+    sll $t4, $t2, 7     
+    add $t3, $t0, $t4   
+    add $t3, $t3, $t9   
+    li $t4, 0xCC0000    # red 
+    sw $t4, 0($t3)
+   
+check_blue:
+    blez $t6, check_green   
+    li $t1, 17
+    li $t2, 25
+    sll $t9, $t1, 2     
+    sll $t4, $t2, 7     
+    add $t3, $t0, $t4   
+    add $t3, $t3, $t9   
+    li $t4, 0x0000CC    # blue
+    sw $t4, 0($t3)
+   
+check_green:
+    blez $t7, done      
+    li $t1, 19
+    li $t2, 25
+    sll $t9, $t1, 2     
+    sll $t4, $t2, 7     
+    add $t3, $t0, $t4   
+    add $t3, $t3, $t9   
+    li $t4, 0x00CC00    # green
+    sw $t4, 0($t3)
+
+done:
+   jr $ra
 
 ##########################################################################
 # CHECK BOTTOM LOGIC
@@ -304,13 +411,13 @@ check_column:
     j next_position                  # Not a pill color, skip 
    
 check_below:
-   addi $t5, $t3, 128
-   lw $t6, 0($t5)      
-   bne $t6, 0x000000, next_position  # if position below not black
+    addi $t5, $t3, 128
+    lw $t6, 0($t5)      
+    bne $t6, 0x000000, next_position  # if position below not black
    
-   sw $t4, 0($t5)      # move pixel down
-   sw $zero, 0($t3)    # clear original position
-   j check_column      # check this column again
+    sw $t4, 0($t5)      # move pixel down
+    sw $zero, 0($t3)    # clear original position
+    j check_column      # check this column again
 
 next_position:
     addi $t1, $t1, -1   # move up one row
@@ -329,32 +436,32 @@ drop_done:
 # VERTICAL CHECKING
 ##########################################################################
 check_vert_four:
-   addi $sp, $sp, -4   
-   sw $ra, 0($sp)      
+    addi $sp, $sp, -4   
+    sw $ra, 0($sp)      
    
 check_vert_again:           
-   li $t4, 7              # restart checking from x  = 7
-   li $s7, 0              # reset value storing if we found a match
-   j vert_check_row
+    li $t4, 7              # restart checking from x  = 7
+    li $s7, 0              # reset value storing if we found a match
+    j vert_check_row
    
 vert_check_row:
-   beq $t4, 24, vert_check_done    
+    beq $t4, 24, vert_check_done    
    
-   li $t5, 20             # bottom pointer
-   li $t6, 20             # top pointer 
+    li $t5, 20             # bottom pointer
+    li $t6, 20             # top pointer 
    
-   sll $t7, $t4, 2     
-   add $t7, $t7, $t0      # gives you current x offset 
+    sll $t7, $t4, 2     
+    add $t7, $t7, $t0      # gives you current x offset 
    
-   j vert_look_for_consecutive
+    j vert_look_for_consecutive
    
 vert_check_done:
-   beq $s7, 1, check_vert_again    # if match exists, restart check
+    beq $s7, 1, check_vert_again    # if match exists, restart check
    
-   jal check_horz_four
-   lw $ra, 0($sp)      
-   addi $sp, $sp, 4    
-   jr $ra               # done so go back to where we were
+    jal check_horz_four
+    lw $ra, 0($sp)      
+    addi $sp, $sp, 4    
+    jr $ra               # done so go back to where we were
     
 vert_look_for_consecutive:
     beq $t6, 5, vert_next_column        # reached top of the column (y = 5) so next column
@@ -539,42 +646,34 @@ drop_vertical:
     lw $ra, 0($sp)
     addi $sp, $sp, 4
     jr $ra
-
 drop_column:
     addi $sp, $sp, -4
     sw $ra, 0($sp)
-
-    move $t1, $a1       # starting at top y position
-    addi $t1, $t1, 1    # start at position 1 above the last pixel removed
+    
+    move $t1, $a2       # starting at top y position
+    addi $t1, $t1, -1    # start at position 1 above the last pixel removed
     
     
 drop_loop:
-   beq $t1, 5, column_done    # finished if at top position in jar
-   
-   sll $t3, $t7, 2     
-   sll $t8, $t1, 7     
-   add $t8, $t8, $t0   
-   add $t8, $t8, $t3   # get address of current pixel
-   
-   lw $t9, 0($t8)      # get current pixel color
-   beq $t9, 0xffffff, column_done
-   beq $t9, 0x000000, vert_next_position  # if black, skip
-   
-   # Check if pure color
-   beq $t9, 0x0000FF, check_below_vert  # pill color blue 
-   beq $t9, 0x00FF00, check_below_vert  # pill color green
-   beq $t9, 0xFF0000, check_below_vert  # pill color red
-   j vert_next_position            # not pill color, skip
-   
-check_below_vert:
-   addi $t3, $t8, 128  
-   lw $t4, 0($t3)      
-   bne $t4, 0x000000, vert_next_position  # if not black below, cant drop
-   
-   sw $t9, 0($t3)      # move color down
-   sw $zero, 0($t8)    # clear original position
-   addi $t1, $t1, 1
-   j drop_loop         # check column again
+    beq $t1, 5, column_done    # finished if at top position in jar
+    
+    sll $t3, $t7, 2     
+    sll $t8, $t1, 7     
+    add $t8, $t8, $t0   
+    add $t8, $t8, $t3   # get address of current pixel
+    
+    lw $t9, 0($t8)      
+    beq $t9, 0xffffff, column_done
+    beq $t9, 0x000000, vert_next_position  # If black, skip
+    
+    addi $t3, $t8, 128  
+    lw $t4, 0($t3)     
+    bne $t4, 0x000000, vert_next_position  # if not black below, cant drop
+    
+    sw $t9, 0($t3)      
+    sw $zero, 0($t8)    
+    addi $t1, $t1, 1
+    j drop_loop         
     
 vert_next_position:
     addi $t1, $t1, -1    # move up one row
@@ -642,8 +741,103 @@ keyboard_input:                    # any key is pressed
     j main
     
 F_input:
-
+    lw $t2, saved_first_color
+    beq $t2, $zero, save_color
+    j remove_saved_color
+    
+save_color:
+    lw $s0, first_color
+    lw $s1, second_color
+    sw $s0, saved_first_color
+    sw $s1, saved_second_color
+    jal erase_prev
+    jal update_colors
+    
+    li $t1, 28          
+    li $t2, 19          
+    sll $t1, $t1, 2     
+    sll $t2, $t2, 7     
+    add $t3, $t0, $t2  
+    add $t3, $t3, $t1   # point (28, 19)
+    
+    lw $t4, saved_first_color
+    sw $t4, 0($t3)
+    
+    li $t1, 29           
+    sll $t1, $t1, 2 
+    add $t3, $t0, $t2   
+    add $t3, $t3, $t1   # point (29, 19)
+    
+    lw $t4, saved_second_color
+    sw $t4, 0($t3)
+    
     j main_draw
+    
+remove_saved_color:
+    lw $t1, saved_first_color
+    lw $t2, saved_second_color
+    
+    lw $t3, next_first_color4
+    lw $t4, next_second_color4
+    sw $t3, next_first_color5
+    sw $t4, next_second_color5
+    
+    lw $t3, next_first_color3
+    lw $t4, next_second_color3
+    sw $t3, next_first_color4
+    sw $t4, next_second_color4
+
+    lw $t3, next_first_color2
+    lw $t4, next_second_color2
+    sw $t3, next_first_color3
+    sw $t4, next_second_color3
+    
+    lw $t3, next_first_color
+    lw $t4, next_second_color
+    sw $t3, next_first_color2
+    sw $t4, next_second_color2
+    
+    lw $t3, first_color
+    lw $t4, second_color
+    sw $t3, next_first_color
+    sw $t4, next_second_color
+    
+    sw $t1, first_color
+    sw $t2, second_color
+   
+    sw $zero, saved_first_color
+    sw $zero, saved_second_color
+    
+    jal erase_prev
+    
+    li $t1, 15    
+    li $t2, 6     
+    li $t3, 16    
+    li $t4, 6     
+
+    sw $t1, first_x_pill
+    sw $t2, first_y_pill
+    sw $t3, second_x_pill  
+    sw $t4, second_y_pill
+   
+    li $t1, 28          
+    li $t2, 19          
+    sll $t1, $t1, 2     
+    sll $t2, $t2, 7     
+    add $t3, $t0, $t2  
+    add $t3, $t3, $t1   # point (28, 19)
+    
+    sw $zero, 0($t3)
+    
+    li $t1, 29           
+    sll $t1, $t1, 2 
+    add $t3, $t0, $t2   
+    add $t3, $t3, $t1   # point (29, 19)
+    
+    sw $zero, 0($t3)
+   
+   j main_draw
+
 
 Q_input:
     li $v0, 10                   # quit
@@ -968,29 +1162,40 @@ draw_pill:
     jr $ra              # jump to previous
 
 update_colors:
-    # Shift first set up
+    li $t1, 15    
+    li $t2, 6     
+    li $t3, 16    
+    li $t4, 6     
+
+    sw $t1, first_x_pill
+    sw $t2, first_y_pill
+    sw $t3, second_x_pill  
+    sw $t4, second_y_pill
+    
     lw $s0, next_first_color
     lw $s1, next_second_color
     sw $s0, first_color
     sw $s1, second_color
     
-    # Shift second set up
     lw $s0, next_first_color2
     lw $s1, next_second_color2
     sw $s0, next_first_color
     sw $s1, next_second_color
     
-    # Shift third set up
     lw $s0, next_first_color3
     lw $s1, next_second_color3
     sw $s0, next_first_color2
     sw $s1, next_second_color2
     
-    # Shift fourth set up
     lw $s0, next_first_color4
     lw $s1, next_second_color4
     sw $s0, next_first_color3
     sw $s1, next_second_color3
+    
+    lw $s0, next_first_color5
+    lw $s1, next_second_color5
+    sw $s0, next_first_color4
+    sw $s1, next_second_color4
     
     # Generate new color for next_first_color4
     li $v0, 42
@@ -1012,7 +1217,7 @@ next_first_blue:
     j next_first_done
     
 next_first_done:
-    sw $s6, next_first_color4
+    sw $s6, next_first_color5
     
     # Generate new color for next_second_color4
     li $v0, 42
@@ -1034,7 +1239,7 @@ next_second_blue:
     j next_second_done
 
 next_second_done:
-    sw $s7, next_second_color4
+    sw $s7, next_second_color5
 
     j draw_pill
     
@@ -1264,6 +1469,7 @@ draw_jar_walls:
     li $t1, 0xffffff    # Set color of line
     jal horz_setup
     
+    # draws jar for next pills coming
     addi $a0, $zero, 26  
     addi $a1, $zero, 7   
     addi $a2, $zero, 9  
@@ -1281,6 +1487,50 @@ draw_jar_walls:
     addi $a2, $zero, 4   
     li $t1, 0xffffff     
     jal horz_setup
+    
+    #### draws mini jar for save
+    addi $a0, $zero, 26  
+    addi $a1, $zero, 19   
+    addi $a2, $zero, 3  
+    li $t1, 0xffffff  
+    jal vert_setup
+    
+    addi $a0, $zero, 31  
+    addi $a1, $zero, 19   
+    addi $a2, $zero, 3  
+    li $t1, 0xffffff  
+    jal vert_setup
+    
+    addi $a0, $zero, 26  
+    addi $a1, $zero, 21  
+    addi $a2, $zero, 5   
+    li $t1, 0xffffff     
+    jal horz_setup
+    
+    # draw virus container
+    addi $a0, $zero, 13    # X coordinate 
+    addi $a1, $zero, 23    # Y coordinate (start)
+    addi $a2, $zero, 5     # Height (3 units)
+    li $t1, 0xffffff       # White color
+    jal vert_setup
+   
+   # Draw right vertical line at x=20
+    addi $a0, $zero, 21   
+    addi $a1, $zero, 23   
+    addi $a2, $zero, 5    
+    jal vert_setup
+   
+   # Draw bottom horizontal line
+   addi $a0, $zero, 14    # X coordinate (start)
+   addi $a1, $zero, 27    # Y coordinate 
+   addi $a2, $zero, 7     # Width (7 units)
+   jal horz_setup
+   
+   # Draw top horizontal line
+   addi $a0, $zero, 14   
+   addi $a1, $zero, 23   
+   addi $a2, $zero, 7    
+   jal horz_setup
     
     lw $ra, 0($sp)      # read from stack
     addi $sp, $sp, 4    # move stack pointer back to starting position
@@ -1318,10 +1568,10 @@ horz_setup:
     add $t3, $t2, $a2
 
 draw_horz_line:
-        sw $t1, 0($t2)          # draw pixel at current location
-        addi $t2, $t2, 4        # move one pixel to the right
-        beq $t2, $t3, end_draw_horz_line  # break out of loop
-        j draw_horz_line
+    sw $t1, 0($t2)          # draw pixel at current location
+    addi $t2, $t2, 4        # move one pixel to the right
+    beq $t2, $t3, end_draw_horz_line  # break out of loop
+    j draw_horz_line
 end_draw_horz_line:
     jr $ra
 
