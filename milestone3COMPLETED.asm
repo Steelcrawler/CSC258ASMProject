@@ -155,9 +155,9 @@ look_for_consecutive:
     andi $s0, $t9, 0xff      # left pointer blue (Applies a mask see lecture video to get rightmost bits for green)
     andi $s1, $t1, 0xff     # right pointer blue
     sub $s2, $s0, $s1        # calculate blue difference
-    li $s3, -10              # lower bound (-10)
+    li $s3, -51              # lower bound (-10)
     blt $s2, $s3, check_match_length # if signed difference < -10, not a virus
-    li $s3, 10               # upper bound (10)
+    li $s3, 51               # upper bound (10)
     bgt $s2, $s3, check_match_length # if signed difference > 10, not a virus
 
     srl $t9, $t9, 8
@@ -165,9 +165,9 @@ look_for_consecutive:
     andi $s0, $t9, 0xff                 # left pointer green (Applies a mask see lecture video to get rightmost bits for green)
     andi $s1, $t1, 0xff                 # right pointer green
     sub $s2, $s0, $s1                   # calculate red difference
-    li $s3, -10                         # lower bound (-10)
+    li $s3, -51                         # lower bound (-10)
     blt $s2, $s3, check_match_length    # if signed difference < -10, not a virus
-    li $s3, 10                          # upper bound (10)
+    li $s3, 51                          # upper bound (10)
     bgt $s2, $s3, check_match_length    # if signed difference > 10, not a virus
 
     srl $t9, $t9, 8
@@ -175,9 +175,9 @@ look_for_consecutive:
     andi $s0, $t9, 0xff                # left pointer red
     andi $s1, $t1, 0xff                 # right pointer red
     sub $s2, $s0, $s1                   # calculate red difference (Applies a mask see lecture video to get rightmost bits for green)
-    li $s3, -10                         # lower bound (-10)
+    li $s3, -51                         # lower bound (-10)
     blt $s2, $s3, check_match_length    # if signed difference < -10, not a virus
-    li $s3, 10                          # upper bound (10)
+    li $s3, 51                          # upper bound (10)
     bgt $s2, $s3, check_match_length    # if signed difference > 10, not a virus
 
     addi $t6, $t6, 1         # Color matches, move on
@@ -372,9 +372,9 @@ vert_look_for_consecutive:
     andi $s0, $t9, 0xff      # left pointer blue (Applies a mask see lecture video to get rightmost bits for green)
     andi $s1, $t1, 0xff      # right pointer blue
     sub $s2, $s0, $s1        # calculate blue difference
-    li $s3, -10              # lower bound (-10)
+    li $s3, -51              # lower bound (-10)
     blt $s2, $s3, vert_check_match_length # if signed difference < -10, not a virus
-    li $s3, 10               # upper bound (10)
+    li $s3, 51               # upper bound (10)
     bgt $s2, $s3, vert_check_match_length # if signed difference > 10, not a virus
 
     srl $t9, $t9, 8
@@ -382,9 +382,9 @@ vert_look_for_consecutive:
     andi $s0, $t9, 0xff                 # left pointer green (Applies a mask see lecture video to get rightmost bits for green)
     andi $s1, $t1, 0xff                 # right pointer green
     sub $s2, $s0, $s1                   # calculate red difference
-    li $s3, -10                         # lower bound (-10)
+    li $s3, -51                        # lower bound (-10)
     blt $s2, $s3, vert_check_match_length    # if signed difference < -10, not a virus
-    li $s3, 10                          # upper bound (10)
+    li $s3, 51                          # upper bound (10)
     bgt $s2, $s3, vert_check_match_length    # if signed difference > 10, not a virus
 
     srl $t9, $t9, 8
@@ -392,9 +392,9 @@ vert_look_for_consecutive:
     andi $s0, $t9, 0xff                 # left pointer red
     andi $s1, $t1, 0xff                 # right pointer red
     sub $s2, $s0, $s1                   # calculate red difference (Applies a mask see lecture video to get rightmost bits for green)
-    li $s3, -10                         # lower bound (-10)
+    li $s3, -51                         # lower bound (-10)
     blt $s2, $s3, vert_check_match_length    # if signed difference < -10, not a virus
-    li $s3, 10                          # upper bound (10)
+    li $s3, 51                          # upper bound (10)
     bgt $s2, $s3, vert_check_match_length    # if signed difference > 10, not a virus
     
     # bne $t9, $t1, vert_check_match_length   # colors arent same, so then check if long enough
@@ -1159,14 +1159,14 @@ draw_virus_loop:
     
     beq $a0, 0, set_red
     beq $a0, 1, set_blue
-    li $t7, 0x00fe00            # green otherwise
+    li $t7, 0x00CC00            # green otherwise
     j draw_pixel
     
 set_red:
-    li $t7, 0xfe0000            # set color to red
+    li $t7, 0xCC0000            # set color to red
     j draw_pixel
 set_blue:
-    li $t7, 0x0000fe            # set color to blue
+    li $t7, 0x0000CC            # set color to blue
     j draw_pixel
     
 draw_pixel:
