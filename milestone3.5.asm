@@ -7,6 +7,7 @@ first_color: .word 0
 second_x_pill: .word 16
 second_y_pill: .word 6
 second_color: .word 0
+viruses_drawn: .byte 0
 
 .text
 lw $t0, displayaddress
@@ -67,15 +68,14 @@ check_bottom:
     jr $ra              # jump to previous
 
 reset_pill:
-    # Draw current pill in final position
     move $t9, $s4       # first color
     sw $t9, 0($t2)      # draw first part
     move $t9, $s5       # second color  
     sw $t9, 0($t3)      # draw second part
-    # jal check_horz_four
+    jal check_horz_four
+    jal check_vert_four
     jal check_end_condition
     
-    # Reset pill position and colors
     li $s0, 15      # x1 position for first part
     li $s1, 6       # y1 position for first part
     li $s2, 16      # x2 position for second part
@@ -90,21 +90,423 @@ reset_pill:
     sw $s4, first_color
     sw $s5, second_color
     
-    lw $ra, 0($sp)      # read from stack
-    addi $sp, $sp, 4    # move stack pointer back to starting position
-    jr $ra              # jump to previous
+    lw $ra, 0($sp)      
+    addi $sp, $sp, 4    
+    jr $ra              
     
 ##########################################################################
 # CHECK IF 4 IN A ROW HORIZONTALLY
 ##########################################################################
+check_horz_four:
+    addi $sp, $sp, -4   
+    sw $ra, 0($sp)
+    
+check_horz_again:           # restart checking
+    li $t4, 20              # restart fromy y = 20
+    li $s7, 0               # stores if any matches were found
+    
+check_row:
+    beq $t4, 5, check_matches_complete    # Changed from check_done
+    
+    li $t5, 7              # left pointer starts x = 7
+    li $t6, 7              # right pointer starts x = 7
+    
+    sll $t7, $t4, 7        # get y row value
+    add $t7, $t7, $t0      # loads t7 with current row value
+    
+    j look_for_consecutive
 
+check_matches_complete:
+    beq $s7, 1, check_horz_again    # If we found matches, check again
+    
+    lw $ra, 0($sp)     
+    addi $sp, $sp, 4    
+    jr $ra              # Only return when no more matches found
+    
+check_done:
+    lw $ra, 0($sp)     
+    addi $sp, $sp, 4    
+    jr $ra              # return to previous point
+    
+look_for_consecutive:
+    beq $t6, 24, next_row        # reached end of row, so go to next
+    
+    
+    sll $t8, $t5, 2     
+    add $t8, $t7, $t8   
+    lw $t9, 0($t8)      # Get color at left pointer
+    
+    beq $t9, 0x000000, move_pointers_same_row # No color here -- move both pointers to next location
+    
+    
+    sll $t8, $t6, 2    
+    add $t8, $t7, $t8  
+    lw $t1, 0($t8)      # Get color at right pointer
+    
+    bne $t9, $t1, check_match_length    # Reached the end of a potential sequence -- check length
+    
+    addi $t6, $t6, 1 # Otherwise color matches so move right pointer again
+    j look_for_consecutive
+
+check_match_length:
+    sub $t8, $t6, $t5   # right pointer loc - left pointer loc
+    
+    bge $t8, 4, horz_prepare_match   # sequence is long enough so need to remove it now
+    
+    move $t5, $t6       # otherwise, move left pointer past this sequence that is too short
+    
+    j look_for_consecutive
+
+horz_prepare_match:
+    addi $t6, $t6, -1   # remove last nonmatching position
+    move $a0, $t4       # y position
+    move $a1, $t5       # start x position
+    move $a2, $t6       # end x position 
+    j handle_horz_match
+    
+move_pointers_same_row:
+    addi $t5, $t5, 1    # move left pointer right
+    addi $t6, $t6, 1    # move right pointer right
+    j look_for_consecutive
+    
+next_row:
+    addi $t4, $t4, -1   # move up one row
+    j check_row
+
+handle_horz_match:
+    addi $sp, $sp, -4          
+    sw $ra, 0($sp)             
+    addi $sp, $sp, -4          
+    sw $t4, 0($sp)             
+    addi $sp, $sp, -4          
+    sw $t5, 0($sp)             
+    addi $sp, $sp, -4  
+    sw $t6, 0($sp)             
+    
+    li $s7, 1                  # Found a match
+    
+    jal clear_horz_consecutive
+    
+
+    lw $t6, 0($sp)
+    addi $sp, $sp, 4
+    lw $t5, 0($sp)
+    addi $sp, $sp, 4
+    lw $t4, 0($sp)
+    addi $sp, $sp, 4
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4        # load all the values back
+    move $t5, $t6              # move left pointer to right pointer location
+    
+    j look_for_consecutive      # go back to search
+
+clear_horz_consecutive:
+    addi $sp, $sp, -4   
+    sw $ra, 0($sp)      
+    
+    sll $a1, $a1, 2     # convert left x to bitmap coords
+    sll $a2, $a2, 2     # convert right x to bitmap coords
+    addi $a2, $a2, 4    # NOTE!!! a1 and a2 can safely be changed because they are never used without being set after but sus code so rip u ig
+    
+    sll $t1, $a0, 7     
+    add $t1, $t1, $t0  
+    
+    move $t2, $a1       # t2 is current pixel being cleared
+    
+clear_loop:
+    beq $t2, $a2, clear_done    # if right position (+1 inherently) reached, then done
+    
+    add $t3, $t1, $t2   # get current coordinate
+    
+    li $t4, 0x000000    
+    sw $t4, 0($t3)      # erase
+    
+    addi $t2, $t2, 4    # move to next pixel
+    j clear_loop
+    
+clear_done:
+    jal drop_everything_above   # need to drop everything above
+
+    lw $ra, 0($sp)      
+    addi $sp, $sp, 4    
+    jr $ra          # go back to original location
+    
+##########################################################################
+# DROPPING EVERYTHING AFTER HORIZONTAL CLEAR
+##########################################################################
+drop_everything_above:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)      
+    
+    addi $t1, $a0, -1  
+    li $t2, 6           # stop at y = 6
+    
+drop_columns:
+    beq $a1, $a2, drop_done     # dropped all columns
+    
+    move $t1, $a0       # start from current row
+    addi $t1, $t1, -1   # move one row up
+    
+check_column:
+    ble $t1, $t2, next_column       # stop if reached y = 6
+    
+    sll $t3, $t1, 7     
+    add $t3, $t3, $t0   
+    add $t3, $t3, $a1   # get current position coordinates
+    
+    lw $t4, 0($t3)      # get the color at that position
+    
+    beq $t4, 0x000000, next_position    # if black, move to next position, nothing to move
+    
+    addi $t5, $t3, 128
+    lw $t6, 0($t5)      
+    bne $t6, 0x000000, next_position  # if position below not black, nothing to move
+    
+
+    sw $t4, 0($t5)      # move pill down
+    sw $zero, 0($t3)    # clear original position
+    j check_column      # check this column again
+    
+next_position:
+    addi $t1, $t1, -1   # move up one row
+    j check_column
+    
+next_column:
+    addi $a1, $a1, 4    # move to next x position
+    j drop_columns
+    
+drop_done:
+    lw $ra, 0($sp)      
+    addi $sp, $sp, 4    
+    jr $ra
+
+##########################################################################
+# VERTICAL CHECKING
+##########################################################################
+check_vert_four:
+    addi $sp, $sp, -4   
+    sw $ra, 0($sp)      
+    
+    li $t4, 7           # start checking from column x = 7
+    j vert_check_row
+    
+vert_check_row:
+    beq $t4, 24, vert_check_done    # done checking if x = 24 (jar width)
+    
+    li $t5, 20          # bottom pointer (same approach as horizontal checking)
+    li $t6, 20          # top pointer 
+    
+    sll $t7, $t4, 2     
+    add $t7, $t7, $t0   # gives you current x offset 
+    
+    j vert_look_for_consecutive
+    
+vert_check_done:
+    lw $ra, 0($sp)      
+    addi $sp, $sp, 4    
+    jr $ra              # done so go back to where we were
+    
+vert_look_for_consecutive:
+    beq $t6, 5, vert_next_column        # reached top of the column (y = 5) so next column
+    
+    sll $t8, $t5, 7     # calculate row offset 
+    add $t8, $t7, $t8   # final position at this point
+    lw $t9, 0($t8)      # get the color
+    
+    beq $t9, 0x000000, vert_move_pointers   # if this point is black, then just move both the pointers
+    
+    sll $t8, $t6, 7     
+    add $t8, $t7, $t8   
+    lw $t1, 0($t8)      # get color from top pointer
+    
+    bne $t9, $t1, vert_check_match_length   # colors arent same, so then check if long enough
+    
+    addi $t6, $t6, -1   # colors match so move top o
+    j vert_look_for_consecutive
+
+vert_check_match_length:
+    sub $t8, $t5, $t6   # top loc - bottom loc
+    
+    bge $t8, 4, vert_prepare_input_params  # if length >= 4, then remove
+    
+    move $t5, $t6       # otherwise move bottom pointer to top
+    
+    j vert_look_for_consecutive
+    
+vert_move_pointers:
+    addi $t5, $t5, -1    # move top pointer up
+    addi $t6, $t6, -1    # move both pointers up
+    j vert_look_for_consecutive
+    
+vert_next_column:
+    addi $t4, $t4, 1    # move to next column
+    j vert_check_row
+
+vert_prepare_input_params:
+    addi $t6, $t6, 1    # adjust top position by 1
+    move $a0, $t4       # x position
+    move $a1, $t6       # start y position (top)     
+    move $a2, $t5       # end y position (bottom)    
+    j vert_handle_match
+
+vert_handle_match:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+    addi $sp, $sp, -4
+    sw $t4, 0($sp)
+    addi $sp, $sp, -4
+    sw $t5, 0($sp)
+    addi $sp, $sp, -4
+    sw $t6, 0($sp)      # store everything just in case
+    
+    jal vert_clear_consecutive
+    
+    lw $t6, 0($sp)
+    addi $sp, $sp, 4
+    lw $t5, 0($sp)
+    addi $sp, $sp, 4
+    lw $t4, 0($sp)
+    addi $sp, $sp, 4
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    
+    move $t5, $t6              # move bottom pointer to current top pointer
+    
+    j vert_look_for_consecutive
+
+vert_clear_consecutive:
+    addi $sp, $sp, -4   
+    sw $ra, 0($sp)      
+    
+    sll $t1, $a0, 2     # convert to coordinates
+    
+    move $t2, $a1       # $t2 stores current pixel to clear
+    
+vert_clear_loop:
+    bgt $t2, $a2, vert_clear_done    # if we've gone past top of section to erase, done
+    
+    sll $t3, $t2, 7     
+    add $t3, $t3, $t0  
+    add $t3, $t3, $t1   # calculate current position
+    
+    sw $zero, 0($t3)    # erase pixel
+    
+    addi $t2, $t2, 1    # move up one position
+    j vert_clear_loop
+    
+vert_clear_done:
+    jal drop_vertical
+    
+    lw $ra, 0($sp)      # restore return address
+    addi $sp, $sp, 4    # restore stack pointer
+    jr $ra
+
+#####################################################################################
+# DROPS EVERYTHING AFTER VERTICAL CLEAR
+#####################################################################################
+drop_vertical:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+    addi $sp, $sp, -4
+    sw $t0, 0($sp)
+    addi $sp, $sp, -4
+    sw $t1, 0($sp)
+    addi $sp, $sp, -4
+    sw $t2, 0($sp)
+    addi $sp, $sp, -4
+    sw $t3, 0($sp)
+    addi $sp, $sp, -4
+    sw $t4, 0($sp)
+    addi $sp, $sp, -4
+    sw $t5, 0($sp)
+    addi $sp, $sp, -4
+    sw $t6, 0($sp)
+    addi $sp, $sp, -4
+    sw $t7, 0($sp)
+    addi $sp, $sp, -4
+    sw $t8, 0($sp)
+    addi $sp, $sp, -4
+    sw $t9, 0($sp)
+    
+    addi $t7, $a0, -1   # Start with left column
+    jal drop_column
+    
+    move $t7, $a0       # Center column
+    jal drop_column
+    
+    addi $t7, $a0, 1    # Right column
+    jal drop_column
+    
+    lw $t9, 0($sp)
+    addi $sp, $sp, 4
+    lw $t8, 0($sp)
+    addi $sp, $sp, 4
+    lw $t7, 0($sp)
+    addi $sp, $sp, 4
+    lw $t6, 0($sp)
+    addi $sp, $sp, 4
+    lw $t5, 0($sp)
+    addi $sp, $sp, 4
+    lw $t4, 0($sp)
+    addi $sp, $sp, 4
+    lw $t3, 0($sp)
+    addi $sp, $sp, 4
+    lw $t2, 0($sp)
+    addi $sp, $sp, 4
+    lw $t1, 0($sp)
+    addi $sp, $sp, 4
+    lw $t0, 0($sp)
+    addi $sp, $sp, 4
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
+
+drop_column:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+    
+    move $t1, $a2       # starting at top y position
+    addi $t1, $t1, -1    # start at position 1 above the last pixel removed
+    
+    
+drop_loop:
+    beq $t1, 5, column_done    # finished if at top position in jar
+    
+    sll $t3, $t7, 2     # x * 4 to convert to byte offset
+    sll $t8, $t1, 7     # y * 128 for row offset
+    add $t8, $t8, $t0   # add base address
+    add $t8, $t8, $t3   # add x byte offset
+    
+    lw $t9, 0($t8)      # Get current pixel color
+    beq $t9, 0xffffff, column_done
+    beq $t9, 0x000000, vert_next_position  # If black, skip
+    
+    addi $t3, $t8, 128  # Address of position below
+    lw $t4, 0($t3)      # Color below
+    bne $t4, 0x000000, vert_next_position  # If not black below, can't drop
+    
+    # Drop the pixel
+    sw $t9, 0($t3)      # Move color down
+    sw $zero, 0($t8)    # Clear original position
+    addi $t1, $t1, 1
+    j drop_loop         # Check column again
+    
+vert_next_position:
+    addi $t1, $t1, -1    # Move up one row
+    j drop_loop
+    
+column_done:
+    # Restore registers
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
 
 ##########################################################################
 # CHECK END CONDITION LOGIC
 ##########################################################################
 check_end_condition:
-    addi $sp, $sp, -4   # update stack position
-    sw $ra, 0($sp)      # write past $ra to stack to return later
+    addi $sp, $sp, -4   
+    sw $ra, 0($sp)      
     
     li $t6, 0           # counter for filled positions
     
@@ -113,32 +515,32 @@ check_end_condition:
     
     # Check (15,5)
     li $t1, 15          # x = 15
-    sll $t1, $t1, 2     # x * 4
-    add $t3, $t0, $t2   # base + y offset (reuse y=5 offset)
-    add $t3, $t3, $t1   # + x offset
-    lw $t4, 0($t3)      # load color at position
-    beq $t4, 0x000000, continue  # if black, continue game
-    addi $t6, $t6, 1    # increment filled counter
+    sll $t1, $t1, 2     
+    add $t3, $t0, $t2   # y offset
+    add $t3, $t3, $t1   # add x
+    lw $t4, 0($t3)      # get color
+    beq $t4, 0x000000, continue  # if black, continue 
+    addi $t6, $t6, 1    # increment counter
     
     # Check (16,5)
     li $t1, 16          # x = 16
-    sll $t1, $t1, 2     # x * 4
-    add $t3, $t0, $t2   # base + y offset (reuse y=5 offset)
-    add $t3, $t3, $t1   # + x offset
-    lw $t4, 0($t3)      # load color at position
-    beq $t4, 0x000000, continue  # if black, continue game
-    addi $t6, $t6, 1    # increment filled counter
+    sll $t1, $t1, 2     
+    add $t3, $t0, $t2   # y offset
+    add $t3, $t3, $t1   # add x
+    lw $t4, 0($t3)      # get color
+    beq $t4, 0x000000, continue  # if black, continue
+    addi $t6, $t6, 1    # increment counter
     
-    # If we got here and counter is 2, both positions were filled
-    beq $t6, 2, game_over
+    beq $t6, 2, game_over   # both positions are filled, end game
+    j continue
 
 continue:
-    lw $ra, 0($sp)      # read from stack
-    addi $sp, $sp, 4    # move stack pointer back to starting position
-    jr $ra              # jump to previous
+    lw $ra, 0($sp)     
+    addi $sp, $sp, 4    
+    jr $ra              # jump to previous point in program
     
 game_over:
-    li $v0, 10          # syscall for exit
+    li $v0, 10    
     syscall             # quit the program
     
 
@@ -319,6 +721,24 @@ vertical:
     j make_horizontal_inverted          # pill is in inverted vertical position
 
 make_horizontal_og:
+    # Check space to right of top segment
+    sll $t1, $s0, 2     # convert first x to bitmap position
+    sll $t2, $s1, 7     # convert first y to row offset
+    add $t3, $t0, $t2   # base + row offset
+    add $t3, $t3, $t1   # + x offset
+    addi $t3, $t3, 4    # check position to right
+    lw $t4, 0($t3)      # get color
+    bne $t4, 0x000000, main_draw  # if not black, can't flip
+    
+    # Check space to right of bottom segment
+    sll $t1, $s2, 2     # convert second x to bitmap position
+    sll $t2, $s3, 7     # convert second y to row offset
+    add $t3, $t0, $t2   # base + row offset
+    add $t3, $t3, $t1   # + x offset
+    addi $t3, $t3, 4    # check position to right
+    lw $t4, 0($t3)      # get color
+    bne $t4, 0x000000, main_draw  # if not black, can't flip
+    
     lw $s0, first_x_pill      # x1 position for first part
     lw $s1, first_y_pill       # y1 position for first part
     
@@ -330,9 +750,26 @@ make_horizontal_og:
     j main
 
 make_horizontal_inverted:
+    # Check space to right of top segment
+    sll $t1, $s0, 2     # convert first x to bitmap position
+    sll $t2, $s1, 7     # convert first y to row offset
+    add $t3, $t0, $t2   # base + row offset
+    add $t3, $t3, $t1   # + x offset
+    addi $t3, $t3, 4    # check position to right
+    lw $t4, 0($t3)      # get color
+    bne $t4, 0x000000, main_draw  # if not black, can't flip
+    
+    # Check space to right of bottom segment
+    sll $t1, $s2, 2     # convert second x to bitmap position
+    sll $t2, $s3, 7     # convert second y to row offset
+    add $t3, $t0, $t2   # base + row offset
+    add $t3, $t3, $t1   # + x offset
+    addi $t3, $t3, 4    # check position to right
+    lw $t4, 0($t3)      # get color
+    bne $t4, 0x000000, main_draw  # if not black, can't flip
+
     lw $s2, second_x_pill      # x2 position for second part
     lw $s3, second_y_pill       # y2 position for red part
-
     addi $s2, $s2, 1 # move bottom pill down and to the right
     addi $s3, $s3, 1
     
@@ -465,51 +902,103 @@ second_done:
 # DRAW THE JAR
 ##########################################################################
 draw_jar: 
-    addi $sp, $sp, -4   # update stack position
-    sw $ra, 0($sp)      # write past $ra to stack to return later
+    addi $sp, $sp, -4   
+    sw $ra, 0($sp)     
     
+    lb $t8, viruses_drawn       # if viruses have already been drawn
+    bne $t8, $zero, draw_jar_walls  # skip if already drawn viruses
+    
+    li $t9, 3                   # number of viruses to draw
+    
+draw_virus_loop:
+    li $v0, 42                  
+    li $a0, 0                   
+    li $a1, 17                  
+    syscall
+    addi $t1, $a0, 7            # random x between 7 and 22
+    
+    li $v0, 42
+    li $a0, 0
+    li $a1, 6
+    syscall
+    addi $t2, $a0, 15           # random y location between 15 and 20
+    
+    # random color 
+    li $v0, 42
+    li $a0, 0
+    li $a1, 3       
+    syscall
+    
+    beq $a0, 0, set_red
+    beq $a0, 1, set_blue
+    li $t7, 0xffff00            # Yellow otherwise
+    j draw_pixel
+    
+set_red:
+    li $t7, 0xff0000            # set color to red
+    j draw_pixel
+set_blue:
+    li $t7, 0x0000ff            # set color to blue
+    j draw_pixel
+    
+draw_pixel:
+    sll $t6, $t1, 2             
+    sll $t5, $t2, 7             
+    add $t5, $t5, $t6           
+    add $t5, $t5, $t0           # calculate location
+    
+    sw $t7, 0($t5)              # drw virus
+    
+    addi $t9, $t9, -1           # reduce virus counter
+    bgtz $t9, draw_virus_loop   # continue counter not 0
+    
+    li $t8, 1
+    sb $t8, viruses_drawn       # otherwise, all viruses have been drawn
+
+
+draw_jar_walls:
     addi $a0, $zero, 14 # Set X coordinate for starting point of line
-    addi $a1, $zero, 2 # Set Y coordinate for starting point of line
-    addi $a2, $zero, 3 # Set length of line
-    li $t1, 0xffffff # Set color of line
+    addi $a1, $zero, 2  # Set Y coordinate for starting point of line
+    addi $a2, $zero, 3  # Set length of line
+    li $t1, 0xffffff    # Set color of line
     jal vert_setup
     
     addi $a0, $zero, 17 # Set X coordinate for starting point of line
-    addi $a1, $zero, 2 # Set Y coordinate for starting point of line
-    addi $a2, $zero, 3 # Set length of line
-    li $t1, 0xffffff # Set color of line
+    addi $a1, $zero, 2  # Set Y coordinate for starting point of line
+    addi $a2, $zero, 3  # Set length of line
+    li $t1, 0xffffff    # Set color of line
     jal vert_setup
     
-    addi $a0, $zero, 6 # Set X coordinate for starting point of line
-    addi $a1, $zero, 5 # Set Y coordinate for starting point of line
+    addi $a0, $zero, 6  # Set X coordinate for starting point of line
+    addi $a1, $zero, 5  # Set Y coordinate for starting point of line
     addi $a2, $zero, 16 # Set length of line
-    li $t1, 0xffffff # Set color of line
+    li $t1, 0xffffff    # Set color of line
     jal vert_setup
     
     addi $a0, $zero, 24 # Set X coordinate for starting point of line
-    addi $a1, $zero, 5 # Set Y coordinate for starting point of line
+    addi $a1, $zero, 5  # Set Y coordinate for starting point of line
     addi $a2, $zero, 16 # Set length of line
-    li $t1, 0xffffff # Set color of line
+    li $t1, 0xffffff    # Set color of line
     jal vert_setup
     
-    addi $a0, $zero, 6 # Set X coordinate for starting point of line
-    addi $a1, $zero, 5 # Set Y coordinate for starting point of line
-    addi $a2, $zero, 9 # Set length of line
-    li $t1, 0xffffff # Set color of line
+    addi $a0, $zero, 6  # Set X coordinate for starting point of line
+    addi $a1, $zero, 5  # Set Y coordinate for starting point of line
+    addi $a2, $zero, 9  # Set length of line
+    li $t1, 0xffffff    # Set color of line
     jal horz_setup
     
     addi $a0, $zero, 17 # Set X coordinate for starting point of line
-    addi $a1, $zero, 5 # Set Y coordinate for starting point of line
-    addi $a2, $zero, 8 # Set length of line
-    li $t1, 0xffffff # Set color of line
+    addi $a1, $zero, 5  # Set Y coordinate for starting point of line
+    addi $a2, $zero, 8  # Set length of line
+    li $t1, 0xffffff    # Set color of line
     jal horz_setup
     
-    addi $a0, $zero, 6 # Set X coordinate for starting point of line
+    addi $a0, $zero, 6  # Set X coordinate for starting point of line
     addi $a1, $zero, 21 # Set Y coordinate for starting point of line
     addi $a2, $zero, 19 # Set length of line
-    li $t1, 0xffffff # Set color of line
+    li $t1, 0xffffff    # Set color of line
     jal horz_setup
-
+    
     lw $ra, 0($sp)      # read from stack
     addi $sp, $sp, 4    # move stack pointer back to starting position
     jr $ra              # jump to previous
@@ -526,7 +1015,6 @@ vert_setup:
     sll $a2, $a2, 7     # Convert the  line length from pixls to bytes (multiply by 4)
     add $t3, $t2, $a2   # Add this offset to $t2 to figure out when to stop drawing
 
-# Loop n times (n = length of the line)
 draw_vert_line:
     sw $t1, 0($t2)          # Draw yellow pixel at current location
     addi $t2, $t2, 128        # Move current location 1 pixel to the right (4 bytes)
@@ -543,11 +1031,9 @@ horz_setup:
     sll $a1, $a1, 7     # shift the Y value by 7 bits (multiply by 128)
     add $t2, $t0, $a1   # add the Y offset to $t0
     add $t2, $t2, $a0   # add the X offset to #t2
-    # Convert the line length from pixels to bytes
     sll $a2, $a2, 2     # Convert the  line length from pixls to bytes (multiply by 4)
     add $t3, $t2, $a2   # Add this offset to $t2 to figure out when to stop drawing
 
-# Loop n times (n = length of the line)
 draw_horz_line:
         sw $t1, 0($t2)          # Draw yellow pixel at current location
         addi $t2, $t2, 4        # Move current location 1 pixel to the right (4 bytes)
