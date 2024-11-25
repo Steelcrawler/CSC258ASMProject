@@ -9,6 +9,12 @@ second_y_pill: .word 6
 second_color: .word 0
 next_first_color: .word 0
 next_second_color: .word 0
+next_first_color2: .word 0
+next_second_color2: .word 0
+next_first_color3: .word 0
+next_second_color3: .word 0
+next_first_color4: .word 0
+next_second_color4: .word 0
 viruses_drawn: .byte 0
 
 .text
@@ -925,15 +931,35 @@ draw_pill:
     jr $ra              # jump to previous
 
 update_colors:
-    move $s4, $s6       # first_color = next_first_color
-    move $s5, $s7       # second_color = next_second_color
-    sw $s4, first_color
-    sw $s5, second_color
+    # Shift first set up
+    lw $s0, next_first_color
+    lw $s1, next_second_color
+    sw $s0, first_color
+    sw $s1, second_color
     
-    li $v0, 42  # new color for next_first_color
-    li $a0, 0           
-    li $a1, 3           
-    syscall             
+    # Shift second set up
+    lw $s0, next_first_color2
+    lw $s1, next_second_color2
+    sw $s0, next_first_color
+    sw $s1, next_second_color
+    
+    # Shift third set up
+    lw $s0, next_first_color3
+    lw $s1, next_second_color3
+    sw $s0, next_first_color2
+    sw $s1, next_second_color2
+    
+    # Shift fourth set up
+    lw $s0, next_first_color4
+    lw $s1, next_second_color4
+    sw $s0, next_first_color3
+    sw $s1, next_second_color3
+    
+    # Generate new color for next_first_color4
+    li $v0, 42
+    li $a0, 0
+    li $a1, 3
+    syscall
     
     beq $a0, 0, next_first_red
     beq $a0, 1, next_first_blue
@@ -949,9 +975,10 @@ next_first_blue:
     j next_first_done
     
 next_first_done:
-    sw $s6, next_first_color
+    sw $s6, next_first_color4
     
-    li $v0, 42      # new colors for next_second_color
+    # Generate new color for next_second_color4
+    li $v0, 42
     li $a0, 0
     li $a1, 3
     syscall
@@ -968,6 +995,11 @@ next_second_red:
 next_second_blue:
     li $s7, 0x0000ff    # blue 
     j next_second_done
+
+next_second_done:
+    sw $s7, next_second_color4
+
+    j draw_pill
     
 draw_next_pill:
     addi $sp, $sp, -4
@@ -994,24 +1026,82 @@ draw_next_pill:
     sw $t9, 0($sp)
     
     
-    li $t1, 6          
-    li $t2, 25          
+    li $t1, 28          
+    li $t2, 7          
     sll $t1, $t1, 2     
     sll $t2, $t2, 7     
     add $t3, $t0, $t2  
-    add $t3, $t3, $t1   # point (6, 25)
+    add $t3, $t3, $t1   # point (28, 7)
     
     lw $t4, next_first_color
     sw $t4, 0($t3)
     
-    li $t1, 7           
+    li $t1, 29           
     sll $t1, $t1, 2 
     add $t3, $t0, $t2   
-    add $t3, $t3, $t1   # point (7, 25)
+    add $t3, $t3, $t1   # point (29, 7)
     
     lw $t4, next_second_color
+    sw $t4, 0($t3)
+
+    li $t1, 28          
+    li $t2, 9          
+    sll $t1, $t1, 2     
+    sll $t2, $t2, 7     
+    add $t3, $t0, $t2  
+    add $t3, $t3, $t1   # point (28, 9)
+    
+    lw $t4, next_first_color2
+    sw $t4, 0($t3)
+    
+    li $t1, 29           
+    sll $t1, $t1, 2 
+    add $t3, $t0, $t2   
+    add $t3, $t3, $t1   # point (29, 9)
+    
+    lw $t4, next_second_color2
+    sw $t4, 0($t3)
+
+    li $t1, 28          
+    li $t2, 11          
+    sll $t1, $t1, 2     
+    sll $t2, $t2, 7     
+    add $t3, $t0, $t2  
+    add $t3, $t3, $t1   # point (28, 11)
+    
+    lw $t4, next_first_color3
+    sw $t4, 0($t3)
+    
+    li $t1, 29           
+    sll $t1, $t1, 2 
+    add $t3, $t0, $t2   
+    add $t3, $t3, $t1   # point (29, 11)
+    
+    lw $t4, next_second_color3
+    sw $t4, 0($t3)
+
+    li $t1, 28          
+    li $t2, 13          
+    sll $t1, $t1, 2     
+    sll $t2, $t2, 7     
+    add $t3, $t0, $t2  
+    add $t3, $t3, $t1   # point (28, 13)
+    
+    lw $t4, next_first_color4
+    sw $t4, 0($t3)
+    
+    li $t1, 29           
+    sll $t1, $t1, 2 
+    add $t3, $t0, $t2   
+    add $t3, $t3, $t1   # point (29, 13)
+    
+    lw $t4, next_second_color4
+    sw $t4, 0($t3)
+    
+    
     
     sw $t4, 0($t3)
+    
     lw $t9, 0($sp)
     addi $sp, $sp, 4
     lw $t8, 0($sp)
@@ -1035,12 +1125,6 @@ draw_next_pill:
     lw $ra, 0($sp)
     addi $sp, $sp, 4
     jr $ra         
-
-next_second_done:
-    sw $s7, next_second_color
-
-    j draw_pill
-
     
 ##########################################################################
 # DRAW THE JAR
@@ -1141,6 +1225,24 @@ draw_jar_walls:
     addi $a1, $zero, 21 # Set Y coordinate for starting point of line
     addi $a2, $zero, 19 # Set length of line
     li $t1, 0xffffff    # Set color of line
+    jal horz_setup
+    
+    addi $a0, $zero, 26  
+    addi $a1, $zero, 7   
+    addi $a2, $zero, 9  
+    li $t1, 0xffffff  
+    jal vert_setup
+    
+    addi $a0, $zero, 31  
+    addi $a1, $zero, 7   
+    addi $a2, $zero, 9   
+    li $t1, 0xffffff     
+    jal vert_setup
+    
+    addi $a0, $zero, 27  
+    addi $a1, $zero, 15  
+    addi $a2, $zero, 4   
+    li $t1, 0xffffff     
     jal horz_setup
     
     lw $ra, 0($sp)      # read from stack
