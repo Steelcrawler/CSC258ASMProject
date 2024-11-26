@@ -832,7 +832,6 @@ write_game_over:
     li $a2, 4           
     jal horz_setup
 
-    # Next line: OVER
     # draw O
     li $a0, 2          
     li $a1, 13           
@@ -927,7 +926,6 @@ write_game_over:
     li $a2, 1          
     jal vert_setup
 
-    # Delay for 3 seconds
     li $v0, 32
     li $a0, 2000
     syscall
@@ -943,7 +941,7 @@ clear_screen_again:
     j clear_screen_again
 
 draw_press_R:
-    li $t1, 0xffffff      # White color for text
+    li $t1, 0xffffff      
     
     # draw p
     li $a0, 2           
@@ -1137,7 +1135,7 @@ game_over_loop:
     j game_over_loop    
 
 quit_game:
-    li $v0, 10  # quit if the user quits
+    li $v0, 10  
     syscall
 
 reset_game:
@@ -1223,10 +1221,7 @@ reset_backup_loop:
     bgtz $t1, reset_backup_loop
     
     j restart
-    
-# game_over:
-    # li $v0, 10    
-    # syscall             # quit the program
+
     
 
 ##########################################################################
