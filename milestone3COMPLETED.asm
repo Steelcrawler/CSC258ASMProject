@@ -908,7 +908,183 @@ draw_paused:
     li $a0, 27          
     li $a1, 8           
     li $a2, 3           
+    jal horz_setup
+    
+     # draw p
+    li $a0, 2           
+    li $a1, 13           
+    li $a2, 7          
+    jal vert_setup
+    
+    li $a0, 2           
+    li $a1, 13           
+    li $a2, 3           
     jal horz_setup      
+    
+    li $a0, 2           
+    li $a1, 16          
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 5           
+    li $a1, 13           
+    li $a2, 4          
+    jal vert_setup
+    
+    # draw r
+    li $a0, 7           
+    li $a1, 13           
+    li $a2, 7          
+    jal vert_setup
+    
+    li $a0, 7           
+    li $a1, 13           
+    li $a2, 3           
+    jal horz_setup
+    
+    li $a0, 7          
+    li $a1, 16          
+    li $a2, 3           
+    jal horz_setup
+    
+    li $a0, 10           
+    li $a1, 13           
+    li $a2, 4           
+    jal vert_setup
+    
+    li $a0, 8          
+    li $a1, 17          
+    li $a2, 1           
+    jal horz_setup
+    
+    li $a0, 9          
+    li $a1, 18          
+    li $a2, 1           
+    jal horz_setup
+    
+    li $a0, 10          
+    li $a1, 19          
+    li $a2, 1           
+    jal horz_setup
+    
+    
+    
+    # draw e
+    li $a0, 12          
+    li $a1, 13           
+    li $a2, 7           
+    jal vert_setup      
+    
+    li $a0, 12          
+    li $a1, 13           
+    li $a2, 4           
+    jal horz_setup      
+    
+    li $a0, 12          
+    li $a1, 16           
+    li $a2, 4           
+    jal horz_setup      
+    
+    li $a0, 12          
+    li $a1, 19           
+    li $a2, 4           
+    jal horz_setup
+    
+    # draw s
+    li $a0, 17          
+    li $a1, 13           
+    li $a2, 4           
+    jal horz_setup      
+    
+    li $a0, 17          
+    li $a1, 16           
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 17          
+    li $a1, 19           
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 17          
+    li $a1, 13           
+    li $a2, 4           
+    jal vert_setup      
+    
+    li $a0, 20          
+    li $a1, 16           
+    li $a2, 4           
+    jal vert_setup
+    
+    # draw s
+    li $a0, 22          
+    li $a1, 13           
+    li $a2, 4           
+    jal horz_setup      
+    
+    li $a0, 22          
+    li $a1, 16           
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 22          
+    li $a1, 19           
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 22          
+    li $a1, 13           
+    li $a2, 4           
+    jal vert_setup      
+    
+    li $a0, 25          
+    li $a1, 16           
+    li $a2, 4           
+    jal vert_setup
+    
+    # draw left quote
+    li $a0, 9          
+    li $a1, 22           
+    li $a2, 2           
+    jal vert_setup
+    
+    li $a0, 11          
+    li $a1, 22           
+    li $a2, 2           
+    jal vert_setup
+    
+    # draw P
+    li $a0, 13          
+    li $a1, 22           
+    li $a2, 7          
+    jal vert_setup
+    
+    li $a0, 13          
+    li $a1, 22           
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 13          
+    li $a1, 25          
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 16          
+    li $a1, 22           
+    li $a2, 4          
+    jal vert_setup
+    
+    # draw right quote
+    li $a0, 18          
+    li $a1, 22           
+    li $a2, 2           
+    jal vert_setup
+    
+    li $a0, 20          
+    li $a1, 22           
+    li $a2, 2           
+    jal vert_setup
+    
     
     j wait_for_unpause  
 
