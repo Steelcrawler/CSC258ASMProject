@@ -20,7 +20,11 @@ next_first_color5: .word 0
 next_second_color5: .word 0
 saved_first_color: .word 0
 saved_second_color: .word 0
-viruses_drawn: .byte 0
+viruses_drawn: .byte 
+theme_music: .word 82, 83, 82, 83, 81, 79, 79, 81, 82, 83, 81, 79, 79, 79, 79, 82, 83, 82, 83, 81, 79, 79, 81, 71, 71, 72, 72, 73, 73, 74, 74
+current_note: .word 0    
+note_count: .word 31
+sleep_counter: .word 0
 
 .text
 restart:
@@ -41,18 +45,72 @@ main_draw:
     jal draw_pill
     jal draw_next_pill
     jal check_viruses
+    jal check_play_note
     
     li $v0, 32                    # syscall for sleep
-    li $a0, 50                    # sleep for 50 milliseconds
+    li $a0, 10                    # sleep for 50 milliseconds
     syscall
     
     addi $t1, $t1, 1
     
     j main                        # Loop back to main
+    
+check_play_note:
+
+    addi $sp, $sp, -4          
+    sw $ra, 0($sp)             
+    addi $sp, $sp, -4          
+    sw $t2, 0($sp)             
+    addi $sp, $sp, -4          
+    sw $t1, 0($sp)             
+    addi $sp, $sp, -4  
+    sw $t0, 0($sp)   
+    
+    lw $t0, sleep_counter
+    addi $t0, $t0, 1
+    
+    li $t1, 1
+    bne $t0, $t1, save_counter
+    
+    li $t0, 0                     
+    
+    lw $t1, current_note
+    
+    la $t2, theme_music
+    sll $t3, $t1, 2              
+    add $t2, $t2, $t3
+    lw $a0, 0($t2)                
+    
+    li $v0, 31                   # MIDI
+    li $a1, 200                  # 500ms
+    li $a2, 0                    # Piano
+    li $a3, 127                  # Max volume
+    syscall
+    
+    addi $t1, $t1, 1
+    lw $t2, note_count
+    blt $t1, $t2, save_note      # new note
+    li $t1, 0                    # otherwise reset
+    
+save_note:
+    sw $t1, current_note
+    
+save_counter:
+    sw $t0, sleep_counter   
+    
+    lw $t0, 0($sp)
+    addi $sp, $sp, 4
+    lw $t1, 0($sp)
+    addi $sp, $sp, 4
+    lw $t2, 0($sp)
+    addi $sp, $sp, 4
+    lw $ra, 0($sp)
+    
+    jr $ra
 
 gravity_easy:
     li $v0, 32
-    li $a0, 200                    # sleep for 50 milliseconds
+    li $a0, 500                    # sleep for 500 milliseconds
     syscall
     jal S_input
     j main
