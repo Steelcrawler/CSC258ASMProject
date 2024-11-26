@@ -153,7 +153,7 @@ continue_check:
     addi $t2, $t2, 1    
     blt $t2, 22, virus_loop_y   # stop searching at y = 22
     
-clear_indicators:
+clear_virus_display:
     li $t1, 15      
     li $t2, 25      
 
@@ -176,9 +176,9 @@ clear_indicators:
     add $t3, $t0, $t8   
     add $t3, $t3, $t9
     sw $t4, 0($t3)
-    j draw_indicators
+    j draw_virus_display
 
-draw_indicators:
+draw_virus_display:
     beq $t5, $zero, check_blue   
     li $t1, 15
     li $t2, 25
