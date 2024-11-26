@@ -181,13 +181,15 @@ right_music:
     
     j D_input            # Jump to D_done after playing sound
     
-turn_music:
+rotate_music:
     li $v0, 31 # play midi async
     li $a0, 50
     li $a1, 50
     li $a2, 72 # instrument 81
     li $a3, 30 # volume = 30/127
     syscall
+    
+    j W_input
     
 elimination_music:
     li $v0, 31 # play midi async
@@ -1283,7 +1285,7 @@ keyboard_input:                     # any key is pressed
     beq $a0, 0x73, down_music       # check if the key s was pressed 
     beq $a0, 0x64, right_music      # check if the key d was pressed
     beq $a0, 0x61, left_music       # check if the key a was pressed
-    beq $a0, 0x77, W_input          # check if the key w was pressed
+    beq $a0, 0x77, rotate_music          # check if the key w was pressed
     beq $a0, 0x66, F_input          # check if the key f was pressed
     beq $a0, 0x70, P_input          # check if the key p was pressed
     j main
