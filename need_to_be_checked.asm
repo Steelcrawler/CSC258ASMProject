@@ -20,11 +20,12 @@ next_first_color5: .word 0
 next_second_color5: .word 0
 saved_first_color: .word 0
 saved_second_color: .word 0
-viruses_drawn: .byte 0
 theme_music: .word 82, 83, 82, 83, 81, 79, 79, 81, 82, 83, 81, 79, 79, 79, 79, 82, 83, 82, 83, 81, 79, 79, 81, 71, 71, 72, 72, 73, 73, 74, 74
 current_note: .word 0    
 note_count: .word 31
 sleep_counter: .word 0
+gravity_counter: .word 0
+viruses_drawn: .byte 0
 
 .text
 restart:
@@ -36,8 +37,8 @@ main:
     lw $t8, 0($t7)                # Load first word from keyboard
     beq $t8, 1, keyboard_input    # If first word 1, key is pressed
     
-    blt $t1, 2, gravity_easy
-    bge $t1, 2, gravity_hard
+    j gravity_easy
+    # bge $t1, 2, gravity_hard
     
 main_draw:
     jal check_bottom
@@ -48,7 +49,7 @@ main_draw:
     jal check_play_note
     
     li $v0, 32                    # syscall for sleep
-    li $a0, 10                    # sleep for 50 milliseconds
+    li $a0, 50                    # sleep for 50 milliseconds
     syscall
     
     addi $t1, $t1, 1
@@ -56,7 +57,6 @@ main_draw:
     j main                        # Loop back to main
 
 check_play_note:
-
     addi $sp, $sp, -4          
     sw $ra, 0($sp)             
     addi $sp, $sp, -4          
@@ -65,11 +65,12 @@ check_play_note:
     sw $t1, 0($sp)             
     addi $sp, $sp, -4  
     sw $t0, 0($sp)   
+    addi $sp, $sp, -4  
     
     lw $t0, sleep_counter
     addi $t0, $t0, 1
     
-    li $t1, 1
+    li $t1, 3
     bne $t0, $t1, save_counter
     
     li $t0, 0                     
@@ -98,6 +99,7 @@ save_note:
 save_counter:
     sw $t0, sleep_counter   
     
+    addi $sp, $sp, 4
     lw $t0, 0($sp)
     addi $sp, $sp, 4
     lw $t1, 0($sp)
@@ -109,18 +111,28 @@ save_counter:
     jr $ra
 
 gravity_easy:
-    li $v0, 32
-    li $a0, 500                    # sleep for 500 milliseconds
-    syscall
+    lw $t9, gravity_counter
+    addi $t9, $t9, 1
+    
+    # Check if we've reached 30 (300ms equivalent)
+    li $t8, 9000000
+    bne $t9, $t8, save_gravity_counter
+    
+    # If we reached 30, reset counter and perform gravity
+    li $t9, 0
     jal S_input
+    
+save_gravity_counter:
+    sw $t9, gravity_counter
+    
     j main
 
-gravity_hard:
-    li $v0, 32
-    li $a0, 50                    # sleep for 50 milliseconds
-    syscall
-    jal S_input
-    j main
+# gravity_hard:
+    # li $v0, 32
+    # li $a0, 50                    # sleep for 50 milliseconds
+    # syscall
+    # jal S_input
+    # j main
 
 ##########################################################################
 # CHECK FOR VIRUSES
