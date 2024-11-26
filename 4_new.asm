@@ -179,7 +179,7 @@ down_music:
     li $a3, 30 # volume = 30/127
     syscall
     
-    j S_done
+    j S_input
     
 left_music:
     li $v0, 31 # play midi async
@@ -189,17 +189,17 @@ left_music:
     li $a3, 30 # volume = 30/127
     syscall
     
-    j A_done
+    j A_input
     
 right_music:
-    li $v0, 31 # play midi async
-    li $a0, 50
-    li $a1, 50
-    li $a2, 101 # instrument 81
-    li $a3, 30 # volume = 30/127
+    li $v0, 31          # Play MIDI asynchronously
+    li $a0, 100          # Some argument, check if correct (note or sound parameter)
+    li $a1, 100          # Some argument, check if correct (note duration or other)
+    li $a2, 81         # Instrument (e.g., 101 for MIDI instrument)
+    li $a3, 100          # Volume (0-127)
     syscall
     
-    j D_done
+    j D_input            # Jump to D_done after playing sound
     
 turn_music:
     li $v0, 31 # play midi async
@@ -1295,9 +1295,9 @@ reset_backup_loop:
 keyboard_input:                    # any key is pressed
     lw $a0, 4($t7)                  # load second word from keyboard
     beq $a0, 0x71, Q_input          # check if the key q was pressed
-    beq $a0, 0x73, S_input          # check if the key s was pressed 
-    beq $a0, 0x64, D_input          # check if the key d was pressed
-    beq $a0, 0x61, A_input          # check if the key a was pressed
+    beq $a0, 0x73, down_music          # check if the key s was pressed 
+    beq $a0, 0x64, right_music          # check if the key d was pressed
+    beq $a0, 0x61, left_music          # check if the key a was pressed
     beq $a0, 0x77, W_input          # check if the key w was pressed
     beq $a0, 0x66, F_input          # check if the key f was pressed
     beq $a0, 0x70, P_input          # check if the key p was pressed
@@ -1804,7 +1804,6 @@ S_input:
     j main_draw
 
 S_done:
-    j down_music
     j main_draw                      # Return to main loop
     
 D_input: 
@@ -1829,10 +1828,12 @@ D_input:
     addi $t7, $t2, 4
     lw $t8, 0($t7)
     bne $t8, 0x000000, D_done   # right barrier reached
+    # bne $t8, 0x000000, right_music
     
     addi $t7, $t3, 4
     lw $t8, 0($t7)
     bne $t8, 0x000000, D_done   # right barrier reached
+    # bne $t8, 0x000000, right_music
     
     addi $s0, $s0, 1            # move x1 to the right 1 position for top part of pill
     addi $s2, $s2, 1            # move x2 to the right position for top part of pill
@@ -1842,7 +1843,6 @@ D_input:
     
     j main_draw
 D_done:
-    j right_music
     j main_draw
 
 A_input: 
@@ -1881,7 +1881,6 @@ A_input:
     j main_draw
 
 A_done:
-    j left_music
     j main_draw
 
 W_input:
