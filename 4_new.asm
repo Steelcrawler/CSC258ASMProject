@@ -51,14 +51,14 @@ main_draw:
     j main                        # Loop back to main
 
 gravity_easy:
-    li $v0, 32                    # syscall for sleep
-    li $a0, 1000                    # sleep for 50 milliseconds
+    li $v0, 32
+    li $a0, 200                    # sleep for 50 milliseconds
     syscall
     jal S_input
     j main
 
 gravity_hard:
-    li $v0, 32                    # syscall for sleep
+    li $v0, 32
     li $a0, 50                    # sleep for 50 milliseconds
     syscall
     jal S_input
@@ -108,28 +108,29 @@ continue_check:
     blt $t2, 22, virus_loop_y   # stop searching at y = 22
     
 clear_indicators:
-   li $t1, 15      
-   li $t2, 25      
+    li $t1, 15      
+    li $t2, 25      
 
-   li $t4, 0x000000    
+    li $t4, 0x000000    
    
-   sll $t9, $t1, 2     
-   sll $t8, $t2, 7     
-   add $t3, $t0, $t8   
-   add $t3, $t3, $t9
-   sw $t4, 0($t3)
+    sll $t9, $t1, 2     
+    sll $t8, $t2, 7     
+    add $t3, $t0, $t8   
+    add $t3, $t3, $t9
+    sw $t4, 0($t3)
    
-   addi $t1, $t1, 2
-   sll $t9, $t1, 2     
-   add $t3, $t0, $t8   
-   add $t3, $t3, $t9
-   sw $t4, 0($t3)
+    addi $t1, $t1, 2
+    sll $t9, $t1, 2     
+    add $t3, $t0, $t8   
+    add $t3, $t3, $t9
+    sw $t4, 0($t3)
    
-   addi $t1, $t1, 2
-   sll $t9, $t1, 2     
-   add $t3, $t0, $t8   
-   add $t3, $t3, $t9
-   sw $t4, 0($t3)
+    addi $t1, $t1, 2
+    sll $t9, $t1, 2     
+    add $t3, $t0, $t8   
+    add $t3, $t3, $t9
+    sw $t4, 0($t3)
+    j draw_indicators
 
 draw_indicators:
     beq $t5, $zero, check_blue   
@@ -154,7 +155,7 @@ check_blue:
     sw $t4, 0($t3)
    
 check_green:
-    beq $t7, $zero, done      
+    beq $t7, $zero, check_win      
     li $t1, 19
     li $t2, 25
     sll $t9, $t1, 2     
@@ -164,8 +165,356 @@ check_green:
     li $t4, 0x00CC00    # green
     sw $t4, 0($t3)
 
+check_win:
+    bne $t5, $zero, done  
+    bne $t6, $zero, done  
+
+
 done:
-   jr $ra
+    jr $ra
+    
+you_win:
+    li $t2, 16384        
+    li $t3, 0             
+    
+clear_screen_win:
+    beq $t3, $t2, write_you_win  
+    add $t4, $t0, $t3     
+    sw $zero, 0($t4)      
+    addi $t3, $t3, 4      
+    j clear_screen_win
+
+write_you_win:
+    li $t1, 0xffffff    
+    
+    # draw Y
+    li $a0, 4           
+    li $a1, 2           
+    li $a2, 4          
+    jal vert_setup      
+    
+    li $a0, 8           
+    li $a1, 2           
+    li $a2, 4          
+    jal vert_setup
+    
+    li $a0, 6           
+    li $a1, 5           
+    li $a2, 4          
+    jal vert_setup
+    
+    li $a0, 4           
+    li $a1, 5           
+    li $a2, 5         
+    jal horz_setup 
+    
+    
+    
+    # draw O
+    li $a0, 10          
+    li $a1, 2           
+    li $a2, 7           
+    jal vert_setup   
+    
+    li $a0, 13          
+    li $a1, 2           
+    li $a2, 7           
+    jal vert_setup
+    
+    li $a0, 10          
+    li $a1, 2           
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 10          
+    li $a1, 8           
+    li $a2, 3           
+    jal horz_setup
+    
+    # draw U
+    li $a0, 15          
+    li $a1, 2           
+    li $a2, 7           
+    jal vert_setup   
+    
+    li $a0, 18          
+    li $a1, 2           
+    li $a2, 7           
+    jal vert_setup
+    
+    li $a0, 15          
+    li $a1, 8           
+    li $a2, 3           
+    jal horz_setup
+    
+    # draw W
+    li $a0, 4           
+    li $a1, 12           
+    li $a2, 7          
+    jal vert_setup      
+    
+    li $a0, 8          
+    li $a1, 12           
+    li $a2, 7          
+    jal vert_setup 
+    
+    li $a0, 6           
+    li $a1, 16           
+    li $a2, 1          
+    jal vert_setup
+    
+    li $a0, 5           
+    li $a1, 17           
+    li $a2, 1          
+    jal vert_setup
+    
+    li $a0, 7           
+    li $a1, 17           
+    li $a2, 1          
+    jal vert_setup
+    
+    # draw I
+    li $a0, 10          
+    li $a1, 12           
+    li $a2, 7           
+    jal vert_setup
+    
+    # draw N
+    li $a0, 12          
+    li $a1, 12           
+    li $a2, 7          
+    jal vert_setup      
+    
+    li $a0, 16          
+    li $a1, 12           
+    li $a2, 7          
+    jal vert_setup
+    
+    li $a0, 13          
+    li $a1, 13           
+    li $a2, 1          
+    jal vert_setup
+    
+    li $a0, 14          
+    li $a1, 14           
+    li $a2, 1          
+    jal vert_setup
+    
+    li $a0, 15          
+    li $a1, 15           
+    li $a2, 1          
+    jal vert_setup
+
+    li $v0, 32
+    li $a0, 2000
+    syscall
+
+
+    li $t2, 16384        
+    li $t3, 0            
+    
+clear_screen_press_r:
+    beq $t3, $t2, draw_press_r  
+    add $t4, $t0, $t3     
+    sw $zero, 0($t4)      
+    addi $t3, $t3, 4      
+    j clear_screen_press_r
+
+draw_press_r:
+    li $t1, 0xffffff      
+    
+    # draw p
+    li $a0, 2           
+    li $a1, 7           
+    li $a2, 7          
+    jal vert_setup
+    
+    li $a0, 2           
+    li $a1, 7           
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 2           
+    li $a1, 10          
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 5           
+    li $a1, 7           
+    li $a2, 4          
+    jal vert_setup
+    
+    # draw r
+    li $a0, 7           
+    li $a1, 7           
+    li $a2, 7          
+    jal vert_setup
+    li $a0, 7           
+    li $a1, 7           
+    li $a2, 3           
+    jal horz_setup
+    li $a0, 7          
+    li $a1, 10          
+    li $a2, 3           
+    jal horz_setup
+    li $a0, 10           
+    li $a1, 7           
+    li $a2, 4           
+    jal vert_setup
+    li $a0, 8          
+    li $a1, 11          
+    li $a2, 1           
+    jal horz_setup
+    li $a0, 9          
+    li $a1, 12          
+    li $a2, 1           
+    jal horz_setup
+    li $a0, 10          
+    li $a1, 13          
+    li $a2, 1           
+    jal horz_setup
+    
+    # draw e
+    li $a0, 12          
+    li $a1, 7           
+    li $a2, 7           
+    jal vert_setup      
+    
+    li $a0, 12          
+    li $a1, 7           
+    li $a2, 4           
+    jal horz_setup      
+    
+    li $a0, 12          
+    li $a1, 10           
+    li $a2, 4           
+    jal horz_setup      
+    
+    li $a0, 12          
+    li $a1, 13           
+    li $a2, 4           
+    jal horz_setup
+    
+    # draw s
+    li $a0, 17          
+    li $a1, 7           
+    li $a2, 4           
+    jal horz_setup      
+    
+    li $a0, 17          
+    li $a1, 10           
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 17          
+    li $a1, 13           
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 17          
+    li $a1, 7           
+    li $a2, 4           
+    jal vert_setup      
+    
+    li $a0, 20          
+    li $a1, 10           
+    li $a2, 4           
+    jal vert_setup
+    
+    # draw s
+    li $a0, 22          
+    li $a1, 7           
+    li $a2, 4           
+    jal horz_setup      
+    
+    li $a0, 22          
+    li $a1, 10           
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 22          
+    li $a1, 13           
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 22          
+    li $a1, 7           
+    li $a2, 4           
+    jal vert_setup      
+    
+    li $a0, 25          
+    li $a1, 10           
+    li $a2, 4           
+    jal vert_setup
+
+    # draw left quote
+    li $a0, 9          
+    li $a1, 19           
+    li $a2, 2           
+    jal vert_setup
+    
+    li $a0, 11          
+    li $a1, 19           
+    li $a2, 2           
+    jal vert_setup
+    
+    # draw R
+    li $a0, 13          
+    li $a1, 19           
+    li $a2, 7          
+    jal vert_setup
+    
+    li $a0, 13          
+    li $a1, 19           
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 13          
+    li $a1, 22          
+    li $a2, 3           
+    jal horz_setup      
+    
+    li $a0, 16          
+    li $a1, 19           
+    li $a2, 4          
+    jal vert_setup
+    
+    li $a0, 14          
+    li $a1, 23          
+    li $a2, 1          
+    jal vert_setup
+    
+    li $a0, 15          
+    li $a1, 24          
+    li $a2, 1          
+    jal vert_setup
+    
+    li $a0, 16          
+    li $a1, 25          
+    li $a2, 1          
+    jal vert_setup
+    
+    # draw right quote
+    li $a0, 18          
+    li $a1, 19           
+    li $a2, 2           
+    jal vert_setup
+    
+    li $a0, 20          
+    li $a1, 19           
+    li $a2, 2           
+    jal vert_setup
+    
+win_loop:
+    lw $t7, 0xffff0000       
+    beq $t7, 0, win_loop   
+    
+    lw $t7, 0xffff0004       
+    beq $t7, 0x71, quit_game     # q pressed
+    beq $t7, 0x72, reset_game    # r pressed
+    j win_loop
+
+    jr $ra
 
 ##########################################################################
 # Music
