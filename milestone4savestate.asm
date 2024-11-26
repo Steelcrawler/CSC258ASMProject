@@ -82,10 +82,10 @@ count_green:
    
 continue_check:
     addi $t1, $t1, 1    
-    blt $t1, 24, virus_loop_x
+    blt $t1, 24, virus_loop_x   # stop searching at x = 24
    
     addi $t2, $t2, 1    
-    blt $t2, 22, virus_loop_y
+    blt $t2, 22, virus_loop_y   # stop searching at y = 22
     
 clear_indicators:
    li $t1, 15      
@@ -112,7 +112,7 @@ clear_indicators:
    sw $t4, 0($t3)
 
 draw_indicators:
-    blez $t5, check_blue   
+    beq $t5, $zero, check_blue   
     li $t1, 15
     li $t2, 25
     sll $t9, $t1, 2     
@@ -123,7 +123,7 @@ draw_indicators:
     sw $t4, 0($t3)
    
 check_blue:
-    blez $t6, check_green   
+    beq $t6, $zero, check_green   
     li $t1, 17
     li $t2, 25
     sll $t9, $t1, 2     
@@ -134,7 +134,7 @@ check_blue:
     sw $t4, 0($t3)
    
 check_green:
-    blez $t7, done      
+    beq $t7, $zero, done      
     li $t1, 19
     li $t2, 25
     sll $t9, $t1, 2     
@@ -219,15 +219,16 @@ check_horz_four:
     addi $sp, $sp, -4   
     sw $ra, 0($sp)
     
-check_horz_again:           # restart checking
-    li $t4, 20              # restart fromy y = 20
+check_horz_again:   
+    li $t4, 20              # restart from y = 20
     li $s7, 0               # stores if any matches were found
     
 check_row:
-    beq $t4, 5, check_matches_complete    # Changed from check_done
+    beq $t4, 5, check_matches_complete    
     
-    li $t5, 7              # left pointer starts x = 7
-    li $t6, 7              # right pointer starts x = 7
+    li $t5, 6              # left pointer starts x = 6
+    li $t6, 6              # right pointer starts x = 6
+    
     
     sll $t7, $t4, 7        # get y row value
     add $t7, $t7, $t0      # loads t7 with current row value
@@ -241,14 +242,8 @@ check_matches_complete:
     addi $sp, $sp, 4    
     jr $ra              # only return when no more matches 
     
-check_done:
-    lw $ra, 0($sp)     
-    addi $sp, $sp, 4    
-    jr $ra              # return to previous point
-    
 look_for_consecutive:
     beq $t6, 24, next_row        # reached end of row, so go to next
-    
     
     sll $t8, $t5, 2     
     add $t8, $t7, $t8   
@@ -264,29 +259,29 @@ look_for_consecutive:
     andi $s0, $t9, 0xff      # left pointer blue (Applies a mask see lecture video to get rightmost bits for green)
     andi $s1, $t1, 0xff     # right pointer blue
     sub $s2, $s0, $s1        # calculate blue difference
-    li $s3, -51              # lower bound (-10)
-    blt $s2, $s3, check_match_length # if signed difference < -51, not a virus
-    li $s3, 51               # upper bound (10)
-    bgt $s2, $s3, check_match_length # if signed difference > 51, not a virus
+    li $s3, -52              # lower bound (-52)
+    blt $s2, $s3, check_match_length # if signed difference < -52, not a virus
+    li $s3, 52               # upper bound (52)
+    bgt $s2, $s3, check_match_length # if signed difference > 52, not a virus
 
     srl $t9, $t9, 8
     srl $t1, $t1, 8
     andi $s0, $t9, 0xff                 # left pointer green (Applies a mask see lecture video to get rightmost bits for green)
     andi $s1, $t1, 0xff                 # right pointer green
     sub $s2, $s0, $s1                   # calculate red difference
-    li $s3, -51                         # lower bound (-10)
-    blt $s2, $s3, check_match_length    # if signed difference < -51, not a virus
-    li $s3, 51                          # upper bound (10)
-    bgt $s2, $s3, check_match_length    # if signed difference > 51, not a virus
+    li $s3, -52                         # lower bound (-52)
+    blt $s2, $s3, check_match_length    # if signed difference < -52, not a virus
+    li $s3, 52                          # upper bound (52)
+    bgt $s2, $s3, check_match_length    # if signed difference > 52, not a virus
 
     srl $t9, $t9, 8
     srl $t1, $t1, 8
     andi $s0, $t9, 0xff                # left pointer red
     andi $s1, $t1, 0xff                 # right pointer red
     sub $s2, $s0, $s1                   # calculate red difference (Applies a mask see lecture video to get rightmost bits for green)
-    li $s3, -51                         # lower bound (-10)
-    blt $s2, $s3, check_match_length    # if signed difference < -51, not a virus
-    li $s3, 51                          # upper bound (10)
+    li $s3, -52                         # lower bound (-52)
+    blt $s2, $s3, check_match_length    # if signed difference < -52, not a virus
+    li $s3, 52                          # upper bound (52)
     bgt $s2, $s3, check_match_length    # if signed difference > 51, not a virus
 
     addi $t6, $t6, 1         # Color matches, move on
@@ -327,11 +322,10 @@ handle_horz_match:
     addi $sp, $sp, -4  
     sw $t6, 0($sp)             
     
-    li $s7, 1                  # Found a match
+    li $s7, 1                  # found a match
     
     jal clear_horz_consecutive
     
-
     lw $t6, 0($sp)
     addi $sp, $sp, 4
     lw $t5, 0($sp)
